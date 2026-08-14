@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { X } from "lucide-react";
 
-import { getExploreFilters, type ExploreTab } from "@/lib/api-client";
+import { getExploreFilters } from "../api";
+import type { ExploreTab } from "../schemas";
 import { buildExploreHref } from "../lib/presets";
 import { getTabMeta } from "../tabs";
 import { BrowseByGenre } from "./browse-by-genre";
