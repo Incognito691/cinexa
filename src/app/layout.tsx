@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/metadata";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/metadata";
 
 import "./globals.css";
 
@@ -29,7 +29,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — Premium Movie & TV Streaming`,
+    default: SITE_TITLE,
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -39,13 +39,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — Premium Movie & TV Streaming`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: SITE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Premium Movie & TV Streaming`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
   robots: {

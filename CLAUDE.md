@@ -13,7 +13,8 @@ A movie/TV streaming UI built with Next.js 15 (App Router) + React 19 + Tailwind
   - `TMDB_API_KEY` — the only var the app actually needs to run; every TMDB call reaches it via `requireServerEnv("TMDB_API_KEY")`, which throws at request time if unset
   - `OPENAI_API_KEY` — optional; when absent, filter layer 9 (AI) is a hard no-op
 - `.env.example` also lists `NEXTAUTH_SECRET`, `DATABASE_URL`, `GOOGLE_CLIENT_ID/SECRET`. Nothing reads them yet — auth/db are unbuilt. Add them to `envSchema` when you wire those up.
-- Server code must go through `requireServerEnv()`, never `process.env` directly.
+- `NEXT_PUBLIC_SITE_URL` is the one documented exception to the rule below: it's public by definition and must be inlined at build time, so `lib/metadata.ts` reads it from `process.env` directly.
+- All other server code must go through `requireServerEnv()`, never `process.env` directly.
 
 ## Commands
 
@@ -27,7 +28,7 @@ npm test            # vitest run (single-shot)
 npm run test:watch  # vitest watch
 ```
 
-There is **no `prisma/` directory and no schema** — the README's `npx prisma …` commands will fail until someone adds one.
+There is **no `prisma/` directory and no schema** — `npx prisma …` will fail until someone adds one.
 
 Tests live in `src/**/*.test.ts` (Vitest, node env, `globals: false` so import `describe`/`it`/`expect` from `vitest`). The only suites are `src/server/filter/__tests__/` (pipeline + layers + fixtures, 26 tests). Single file: `npx vitest run src/server/filter/__tests__/pipeline.test.ts`.
 
@@ -36,35 +37,45 @@ Tests live in `src/**/*.test.ts` (Vitest, node env, `globals: false` so import `
 ### High-level data flow
 
 ```
-TMDB (REST) ──► server/services/*.service.ts ──► mappers/tmdb.ts ──► server/filter pipeline ──► app/api/*/route.ts (JSON envelope) ──► lib/api-client.ts ──► React Query ──► client components
+TMDB (REST) ──► server/tmdb/ (fetch + map) ──► server/filter pipeline ──► app/api/*/route.ts (JSON envelope) ──► lib/fetcher.ts ──► features/*/api.ts ──► React Query ──► feature components
 ```
 
 Two fetch paths coexist, and the difference matters:
 
-- **`/` (home)** — bypasses the API routes entirely. `app/page.tsx` calls the services directly, wrapping each rail in `safeFetch()` so one failing TMDB call renders an inline rail error instead of blanking the page, then passes results down as plain `initial` props. There is **no React Query / HydrationBoundary on the home rails** — `home-rails.tsx` deliberately avoids client fetching (it caused a "stuck on skeletons" bug when the dev server compiled the API route lazily). `page.tsx`'s own comment claiming HydrationBoundary is stale.
-- **`/explore`** — fully client-driven: URL search params → `useQuery` → `lib/api-client.ts` → `/api/explore`.
+- **`/` (home)** — bypasses the API routes entirely. `app/page.tsx` calls `server/tmdb` directly, wrapping each rail in `safeFetch()` so one failing TMDB call renders an inline rail error instead of blanking the page, then passes results down as plain `initial` props. There is **no React Query on the home rails** — client fetching here caused a "stuck on skeletons" bug when the dev server compiled the API route lazily.
+- **`/explore`** — fully client-driven: URL search params → `useQuery` → `features/explore/api.ts` → `/api/explore`.
 
 Every TMDB-backed path, both of them, runs `applyContentFilterListLevel()` before returning.
 
 ### Directory map (`src/`)
 
-- **`app/`** — App Router. `layout.tsx` wires `ThemeProvider → QueryProvider → TooltipProvider → AppShell`. Pages: `/` (home rails) and `/explore` (filterable catalog). API routes under `app/api/*` return `{ ok: true, data }` or `{ ok: false, error }` via `server/http/response.ts`.
-- **`components/`**
-  - `home/` — hero carousel, rails, bento grid, footer (server-prefetched).
-  - `explore/` — filter toolbar, card grid, pagination, tabs (client-driven).
-  - `layout/` — `AppShell` (sidebar + topbar + theme toggle).
-  - `ui/` — shadcn primitives (new-york style, zinc base). Add via `npx shadcn add …`.
-  - `providers/query-provider.tsx` — TanStack Query client (60s `staleTime`, 5min `gcTime`, no refocus refetch).
-- **`hooks/`** — thin TanStack Query wrappers over `lib/api-client.ts`. Only `useSection` (editorial-spotlight) and `usePersistedFlag` (app-shell sidebar state) are wired up; `useTrending`, `useGenres`, `useMovieCast`, `useMovieVideos` are currently unreferenced, as are `components/home/editorial-spotlight.tsx`, `cta-section.tsx`, and `layout/page-header.tsx`. Reuse or delete rather than adding parallel versions.
-- **`lib/`** — `api-client.ts` (typed fetch helpers, returns `ApiResponse<T>`), `env.ts` (Zod-validated env + `tmdbImage()` URL helper), `schemas/` (Zod for query strings — kept out of route files so route handler types stay clean), `utils.ts` (`cn`).
-- **`server/`**
-  - `services/tmdb.service.ts` and `explore.service.ts` — TMDB fetch wrappers with `next: { revalidate }` caching (120s for plain lists, 60s for `/discover` and search). Both export a near-identical `fetchDiscover`; `tmdb.service` also owns trending, videos, credits, and the detail→`FilterInput` fetchers used by the debug route. **Check which one you're importing** — `/api/discover` and the home page use `tmdb.service`, `/api/explore` uses `explore.service`.
-  - `mappers/tmdb.ts` — `mapTmdbListItem` produces `MediaFilterItem` (adds `adult`, `genres`, `*Ids`, `keywordNames` even though `MediaCardItem` doesn't carry them).
-  - `filter/` — content moderation pipeline (see below).
-  - `http/response.ts` — `ok()` / `fail()` envelope helpers used by every route.
-- **`types/`** — `MediaCardItem` (client-facing) and `ApiResponse<T>` / `ListPayload` envelopes. **Filter inputs use `MediaFilterItem`** so the pipeline can see moderation signals.
+The project is **feature-first**. A surface owns its components, its client-side fetchers, and its schemas; only genuinely shared things sit in the top-level folders.
 
-The README's folder tree lists `features/`, `styles/`, and `data/` — none exist. Global CSS is `src/app/globals.css`.
+- **`app/`** — routes only, kept thin. Pages delegate to a feature; API routes under `app/api/*` return `{ ok: true, data }` or `{ ok: false, error }` via `server/http/response.ts`. Also holds the metadata routes (`icon.tsx`, `opengraph-image.tsx`, `robots.ts`) and `layout.tsx`, which wires `ThemeProvider → QueryProvider → TooltipProvider → AppShell`.
+- **`features/`** — one folder per surface, each with an `index.ts` public entry point.
+  - `home/` — hero, rails, bento grid, footer + `api.ts`
+  - `explore/` — view, card grid, search, chips, genre tiles + `api.ts`, `schemas.ts`, `tabs.ts`, `lib/presets.ts`
+  - `continue-watching/` — the home-page rail (placeholder data until persistence lands)
+  - `title/` — currently just `api.ts`, the client half of the `/api/movie/[id]/*` routes
+- **`components/`** — shared UI only.
+  - `media/media-card.tsx` — **the** poster card, `layout="rail" | "grid"`. Anything listing media renders this.
+  - `layout/` — `AppShell` (sidebar + topbar + theme toggle)
+  - `ui/` — shadcn primitives (new-york, zinc). Add via `npx shadcn add …`
+  - `providers/query-provider.tsx` — TanStack Query client (60s `staleTime`, 5min `gcTime`, no refocus refetch)
+- **`hooks/`** — only cross-feature hooks. Currently just `usePersistedFlag` (sidebar state).
+- **`lib/`** — `fetcher.ts` (`request<T>()`, unwraps the envelope), `env.ts` (Zod env + `tmdbImage()`), `metadata.ts` (`buildMetadata()`), `utils.ts` (`cn`).
+- **`server/`**
+  - `tmdb/` — one TMDB layer: `client.ts` (the only fetch wrapper), `discover.ts`, `trending.ts`, `search.ts`, `details.ts`, `mapper.ts`, `schemas.ts`. Caching is 120s for plain lists, 60s for discover/search.
+  - `filter/` — content moderation pipeline (see below)
+  - `http/response.ts` — `ok()` / `fail()`
+- **`types/`** — `MediaCardItem`, `VideoItem`, `CastMember`, and the `ApiResponse<T>` / `ListPayload` envelopes. Shared shapes live here precisely so a client module never has to import from `server/`.
+
+**Where does new code go?** Follow these two rules and it answers itself:
+
+1. **A component lives in the feature that uses it.** It only graduates to `components/` when a *second* feature needs it. `MediaRail`, `RailCardSkeleton`, and `SiteFooter` each have one consumer today and stay in `features/home/` — promote them when that changes.
+2. **Cross-feature imports go through `index.ts`**, never into a feature's internals. `app/page.tsx` imports `ContinueWatchingRail` from `@/features/continue-watching`, not from its `components/` folder.
+
+Feature folders are created when they have code, not before. `favourites/`, `collections/`, `watch/`, `ai/`, and `settings/` are all planned and all absent — create them with their first real file.
 
 ### Content-filter pipeline (`src/server/filter/`)
 
@@ -78,7 +89,7 @@ Two entry points in `apply.ts`:
 3. **L1 adult flag, L2 networks, L3 companies, L4 keywords, L5 text analysis, L6 genres** — all sync, score-based. L6 never blocks; it only nudges the score ±0.1.
 4. **L9 AI** — gated by `shouldInvokeAI()` so ~90% of items stay deterministic. Calls OpenAI `gpt-4o-mini` with an 8s `AbortSignal.timeout`, returns `null` on any failure (the filter must never throw), and caches per `${mediaType}:${tmdbId}` for 30 days. No-op without `OPENAI_API_KEY`.
 
-Aggregation is layer 10 in `confidence.ts`: `aggregateScore` → weighted 0..1 → `scoreToDecision` (≥0.95 PORNOGRAPHIC/hidden, ≥0.85 EROTIC/hidden, ≥0.45 MATURE/visible, else SAFE/visible). `visible` is deliberately decoupled from `classification` so a future parental-control setting can reuse the same scores. Note `scoreOfLayers` is duplicated in both `confidence.ts` and `pipeline.ts` (the pre-AI gate score) — change both or neither.
+Aggregation is layer 10 in `confidence.ts`: `aggregateScore` → weighted 0..1 → `scoreToDecision` (≥0.95 PORNOGRAPHIC/hidden, ≥0.85 EROTIC/hidden, ≥0.45 MATURE/visible, else SAFE/visible). `visible` is deliberately decoupled from `classification` so a future parental-control setting can reuse the same scores. `scoreOfLayers` (the pre-AI gate score) is exported from `confidence.ts` and imported by `pipeline.ts` — it used to be duplicated in both.
 
 Layer configs are static lists under `filter/config/` (blacklist/whitelist/networks/companies/keywords/phrases). The `FilterConfigVersion` type exists but nothing uses it, and `cache.ts` only wires up `filterAiCache` — `filterDecisionCache` and `filterDetailCache` are dead, so editing a config list takes effect on the next request with no invalidation step.
 
@@ -88,27 +99,36 @@ Layer configs are static lists under `filter/config/` (blacklist/whitelist/netwo
 
 ### Public API contract
 
-All API responses share `ApiResponse<T> = ApiSuccess<T> | ApiError`. List endpoints return `ListPayload { items, page, totalPages, totalResults }`. The client `request<T>()` helper in `lib/api-client.ts` unwraps the envelope and throws on `!ok` — no result-shape duplication needed in hooks.
+All API responses share `ApiResponse<T> = ApiSuccess<T> | ApiError`. List endpoints return `ListPayload { items, page, totalPages, totalResults }`. The client `request<T>()` helper in `lib/fetcher.ts` unwraps the envelope and throws on `!ok`; feature fetchers in `features/*/api.ts` build on it, so no hook duplicates the result shape.
+
+### Metadata / SEO
+
+`lib/metadata.ts` is the single entry point. `layout.tsx` sets `metadataBase` and the `%s · Cinexa` title template; pages call `buildMetadata({ title, description, path, images, noIndex })` and declare only what's theirs. Detail pages should call it from `generateMetadata` and pass a TMDB backdrop as `images`.
+
+`app/icon.tsx` and `app/opengraph-image.tsx` are **generated** with `next/og`, not committed binaries — there is no `public/` directory. `NEXT_PUBLIC_SITE_URL` must be set in production or every canonical and share URL points at localhost. `/explore` is `noIndex` and disallowed in `robots.ts`, because each filter combination is its own URL.
 
 ### Explore tab model
 
-`src/lib/schemas/explore.ts` defines `ExploreTab = "movies" | "tv" | "anime" | "trending"`. `app/api/explore/route.ts` owns the `TAB_CONFIG` map (anime = `tv` + genre 16 + `with_original_language=ja`); `trending` short-circuits to `fetchTrending("/trending/all/week")` and ignores every other param. When `q` is present the route uses `/search/{type}`.
+`features/explore/schemas.ts` defines `ExploreTab = "movies" | "tv" | "anime" | "trending"`. `app/api/explore/route.ts` owns the `TAB_CONFIG` map (anime = `tv` + genre 16 + `with_original_language=ja`); `trending` short-circuits to `fetchTrending` on `/trending/all/week` and ignores every other param. When `q` is present the route uses `/search/{type}`.
 
 Known rough edges in this area — read before "fixing" a chip that seems broken:
-- `/api/explore` parses only `tab`, `page`, `genre`, `sort_by`, `q`. The presets in `lib/explore-presets.ts` and the "See All" hrefs in `home-rails.tsx` emit `language`, `category`, and `vote_count.gte` too, and those are **silently dropped**. (`/api/discover` does honour `language`/`year`/`withGenres`.)
+- `/api/explore` parses only `tab`, `page`, `genre`, `sort_by`, `q`. The presets in `features/explore/lib/presets.ts` and the "See All" hrefs in `home-rails.tsx` emit `language`, `category`, and `vote_count.gte` too, and those are **silently dropped**. (`/api/discover` does honour `language`/`year`/`withGenres`.)
 - `ExploreView` treats a bare `?tab=…` as "no active filters" and renders the landing view, so the Trending preset link shows the landing page, not results.
-- Year param name differs by media type: `primary_release_year` for movie, `first_air_date_year` for tv (handled in both services).
+- Year param name differs by media type — `yearParamFor()` in `server/tmdb/types.ts` handles it.
 
-### Streaming & auth (scaffolded, not yet wired)
+### Not built yet
 
-- `package.json` lists `webtorrent`, `plyr-react`, `next-auth@5.0.0-beta.25`, `@auth/prisma-adapter`, `prisma` — all installed, none imported anywhere in `src/`. No player page, no auth route, no Prisma schema. `lib/schemas/api.ts` has unused `watchTypeSchema` / `tvPlaybackQuerySchema` left over for the player. When adding these, expect `src/app/(player)/…` and `src/app/api/auth/[...nextauth]/route.ts` per the auth.js v5 convention.
+Eight routes are already linked from the UI and **all of them 404**: `/movie/:id`, `/tv/:id`, `/watch/movie/:id`, `/watch/tv/:id` (from every card and the hero), plus `/favourites`, `/continue-watching`, `/my-collection`, `/settings` (from the sidebar). Only `/` and `/explore` exist.
+
+- `package.json` lists `webtorrent`, `plyr-react`, `next-auth@5.0.0-beta.25`, `@auth/prisma-adapter`, `prisma` — all installed, none imported anywhere in `src/`. No player page, no auth route, no Prisma schema. When adding these, expect `src/app/(player)/…` and `src/app/api/auth/[...nextauth]/route.ts` per the auth.js v5 convention.
+- Planned order: persistence (Prisma + Postgres + next-auth) → title detail → AI (a "because you watched" home rail plus an `/ai` chat page, movies only, on the existing `OPENAI_API_KEY` following the fetch pattern in `filter/layers/layer-9-ai.ts`) → watch/player → settings.
 - `next.config.ts` whitelists TMDB, gstatic, Unsplash, and `via.placeholder.com` for `next/image` remote patterns.
 
 ## Conventions
 
 - Path alias: `@/*` → `src/*` (TS + Vitest). shadcn aliases also defined in `components.json`.
-- Server-only code lives under `src/server/**`; client hooks/components import from `@/lib/api-client` (never directly from `src/server/`).
-- API routes: parse query with Zod (use `z.coerce.number()` for ints), return 422 on parse failure, use `ok()` / `fail()` for the envelope, and let everything else bubble to one try/catch returning 500. `/trending` still hand-parses its params — Zod schemas exist in `lib/schemas/api.ts` if you touch it.
+- Server-only code lives under `src/server/**`. Client code never imports from it — **not even type-only**; shared shapes go in `src/types/` so both sides can reach them.
+- API routes: parse query with Zod (use `z.coerce.number()` for ints), return 422 on parse failure, use `ok()` / `fail()` for the envelope, and let everything else bubble to one try/catch returning 500. `/trending` still hand-parses its params — Zod schemas live in `server/tmdb/schemas.ts` if you touch it.
 - Client hooks go through TanStack Query; server-rendered pages fetch per-rail with `safeFetch()` so one failing endpoint doesn't blank the page.
 - Route handlers with dynamic segments take `context: { params: Promise<{ id: string }> }` and must `await context.params` (Next 15).
 - ESLint disables `react-hooks/exhaustive-deps` project-wide; expect manual dep array review.

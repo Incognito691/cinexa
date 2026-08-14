@@ -10,6 +10,9 @@ import type { Metadata } from "next";
 
 export const SITE_NAME = "Cinexa";
 
+/** Used verbatim as the root <title> and as the OG title on untitled pages. */
+export const SITE_TITLE = `${SITE_NAME} — Premium Movie & TV Streaming`;
+
 export const SITE_DESCRIPTION =
   "Discover and stream thousands of movies and TV shows — what's trending now, top-rated classics, anime, and more.";
 
@@ -57,14 +60,14 @@ export function buildMetadata({
     openGraph: {
       type: type === "website" ? "website" : "video.other",
       siteName: SITE_NAME,
-      title: title ? `${title} · ${SITE_NAME}` : SITE_NAME,
+      title: title ? `${title} · ${SITE_NAME}` : SITE_TITLE,
       description,
       url,
       ...(ogImages ? { images: ogImages } : {}),
     },
     twitter: {
       card: "summary_large_image",
-      title: title ? `${title} · ${SITE_NAME}` : SITE_NAME,
+      title: title ? `${title} · ${SITE_NAME}` : SITE_TITLE,
       description,
       ...(ogImages ? { images: ogImages } : {}),
     },
