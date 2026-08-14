@@ -14,7 +14,7 @@ import { layer6Genres } from "./layers/layer-6-genres";
 import { layer7ManualBlacklist } from "./layers/layer-7-manual-blacklist";
 import { layer8ManualWhitelist } from "./layers/layer-8-manual-whitelist";
 import { layer9Ai, classifyWithAI } from "./layers/layer-9-ai";
-import { decide, shouldInvokeAI } from "./confidence";
+import { decide, scoreOfLayers, shouldInvokeAI } from "./confidence";
 
 /**
  * Runs all 10 layers in priority order and aggregates them into a FilterDecision.
@@ -106,25 +106,3 @@ function toFilterInput(input: ListLevelSignals): FilterInput {
   };
 }
 
-/**
- * Compute the raw weighted score (0..1) used for AI gating.
- * Mirrors the aggregation logic in `confidence.ts` but returns only the number.
- */
-function scoreOfLayers(layers: LayerResult[]): number {
-  let s = 0;
-  for (const l of layers) {
-    if (l.layer === 7 && l.decision === "BLOCK") s = Math.max(s, 1);
-    else if (l.layer === 2 || l.layer === 3)
-      s = l.decision === "BLOCK" ? Math.max(s, 0.95) : s;
-    else if (l.layer === 4 && l.decision === "BLOCK")
-      s = Math.max(s, 0.85);
-    else if (l.layer === 5) s = Math.max(s, l.confidence);
-    else if (l.layer === 1 && l.class === "PORNOGRAPHIC")
-      s = Math.max(s, 0.8);
-    else if (l.layer === 6) {
-      const nudge = l.class === "EROTIC" ? 0.1 : l.class === "SAFE" ? -0.1 : 0;
-      s = Math.max(0, Math.min(1, s + nudge));
-    }
-  }
-  return s;
-}

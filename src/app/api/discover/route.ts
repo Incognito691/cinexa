@@ -1,6 +1,6 @@
-import { discoverQuerySchema } from "@/lib/schemas/api";
+import { discoverQuerySchema } from "@/server/tmdb/schemas";
 import { fail, ok } from "@/server/http/response";
-import { fetchDiscover } from "@/server/services/tmdb.service";
+import { fetchDiscover } from "@/server/tmdb";
 
 export async function GET(request: Request) {
   try {
