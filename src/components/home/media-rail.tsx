@@ -4,9 +4,9 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { MediaCard } from "@/components/media/media-card";
 import type { MediaCardItem } from "@/types/media";
 
-import { MediaCard } from "./media-card";
 import { RailCardSkeleton } from "./rail-card-skeleton";
 
 /**
