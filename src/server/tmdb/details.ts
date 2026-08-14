@@ -1,19 +1,13 @@
 import type { FilterInput } from "@/server/filter/types";
+import type { CastMember, VideoItem } from "@/types/media";
 
 import { tmdbFetch } from "./client";
+
+export type { CastMember, VideoItem };
 
 // ──────────────── Videos ────────────────
 
 interface TmdbVideoRaw {
-  id: string;
-  key: string;
-  name: string;
-  site: string;
-  type: string;
-  official: boolean;
-}
-
-export interface VideoItem {
   id: string;
   key: string;
   name: string;
@@ -45,14 +39,6 @@ interface TmdbCastMemberRaw {
   name: string;
   character: string;
   profile_path: string | null;
-  order: number;
-}
-
-export interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profilePath: string | null;
   order: number;
 }
 
