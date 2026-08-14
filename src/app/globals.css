@@ -1,0 +1,269 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.75rem;
+
+    --sidebar: 0 0% 98%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    /* Brand gradient — kept purple/pink for the existing sidebar + chrome. */
+    --brand-from: 271 91% 65%;
+    --brand-to: 330 81% 60%;
+  }
+
+  .dark {
+    /* Obsidian Cinema palette — Stitch "Cinematic Lux Streaming Landing". */
+    --background: 0 0% 3.5%;                       /* #090909 */
+    --foreground: 18 10% 90%;                     /* #e5e2e1 on-surface */
+    --card: 0 0% 7.5%;                            /* #131313 surface */
+    --card-foreground: 18 10% 90%;
+    --popover: 0 0% 7.5%;
+    --popover-foreground: 18 10% 90%;
+    --primary: 7 99% 53%;                         /* #e50914 primary-container */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 263 91% 56%;                     /* #7c3aed secondary */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 12%;                            /* #1f1f1f */
+    --muted-foreground: 18 25% 80%;               /* #e9bcb6 on-surface-variant */
+    --accent: 217 95% 53%;                        /* #0873d2 tertiary */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 7 99% 53%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 10%;                           /* #1a1a1a */
+    --input: 0 0% 10%;
+    --ring: 7 99% 53%;
+
+    /* Surface scale (Material-3 inspired). */
+    --surface-dim: 0 0% 7.5%;
+    --surface-bright: 0 0% 23%;
+    --surface-container-lowest: 0 0% 5.5%;
+    --surface-container-low: 0 0% 11%;
+    --surface-container: 0 0% 12.5%;
+    --surface-container-high: 0 0% 16.5%;
+    --surface-container-highest: 0 0% 21%;
+
+    /* Semantic aliases. */
+    --on-surface: 18 10% 90%;
+    --on-surface-variant: 18 25% 80%;
+    --primary-container: 7 99% 53%;               /* #e50914 */
+    --inverse-primary: 0 88% 38%;                 /* #c0000c */
+
+    --sidebar: 0 0% 3.5%;                        /* matches page bg */
+    --sidebar-foreground: 18 10% 90%;
+    --sidebar-border: 0 0% 10%;
+    --sidebar-accent: 0 0% 11%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Drift-style shimmer used by our skeleton placeholders. The
+     `bg-[length:200%_100%]` on the consumer side makes the gradient wider
+     than the card so the travel direction reads left-to-right. */
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Glass morphism utilities — tuned so the purple/pink gradient bleeds through */
+  .glass {
+    background: hsl(0 0% 100% / 0.04);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.05),
+      0 1px 2px 0 hsl(0 0% 0% / 0.05);
+  }
+
+  .glass-strong {
+    background: hsl(0 0% 100% / 0.07);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid hsl(0 0% 100% / 0.1);
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.08),
+      0 4px 12px 0 hsl(0 0% 0% / 0.1);
+  }
+
+  .glass-card {
+    background: hsl(0 0% 100% / 0.04);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.07);
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.04),
+      0 1px 3px 0 hsl(0 0% 0% / 0.06);
+  }
+
+  /* Hide scrollbar but keep scroll behaviour */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom purple → pink scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--brand-from) / 0.6) hsl(var(--border) / 0.3);
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--border) / 0.3);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--brand-from) / 0.7),
+      hsl(var(--brand-to) / 0.7)
+    );
+    border-radius: 4px;
+  }
+
+  /* Brand gradient text */
+  .text-brand-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--brand-from)),
+      hsl(var(--brand-to))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Brand gradient background */
+  .bg-brand-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--brand-from)),
+      hsl(var(--brand-to))
+    );
+  }
+
+  /* ─────────────────────────── Stitch "Obsidian Cinema" system ─────────────────────────── */
+
+  /* Elevated glass — strong backdrop blur, white tint, opaque-ish surface. */
+  .glass-elevated {
+    background: rgba(19, 19, 19, 0.6);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      0 4px 24px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  /* Subtle glass — for rail rows, secondary surfaces. */
+  .glass-subtle {
+    background: rgba(19, 19, 19, 0.4);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* Hero overlay — gradient that fades a backdrop image into the obsidian bg.
+     Weighted to the lower-left where the copy sits; the right half stays
+     mostly clear so the artwork is actually visible. */
+  .hero-overlay {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(9, 9, 9, 0.92) 0%,
+        rgba(9, 9, 9, 0.72) 30%,
+        rgba(9, 9, 9, 0.34) 55%,
+        rgba(9, 9, 9, 0.04) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(9, 9, 9, 0.2) 0%,
+        rgba(9, 9, 9, 0) 45%,
+        rgba(9, 9, 9, 0.55) 78%,
+        rgba(9, 9, 9, 0.95) 100%
+      );
+  }
+
+  /* Top edge vignette — sits above the hero so the page bg above blends in. */
+  .hero-top-vignette {
+    background: linear-gradient(
+      180deg,
+      rgba(9, 9, 9, 0.9) 0%,
+      rgba(9, 9, 9, 0.4) 40%,
+      rgba(9, 9, 9, 0) 100%
+    );
+  }
+
+  /* Primary glow — red glow used on hover for movie cards / CTAs. */
+  .primary-glow {
+    box-shadow:
+      0 0 0 1px rgba(229, 9, 20, 0.4),
+      0 8px 28px -4px rgba(229, 9, 20, 0.45),
+      0 0 24px -6px rgba(229, 9, 20, 0.35);
+  }
+
+  /* Reveal animation — opacity 0 → 1 + translateY 30px → 0.
+     Paired with scroll-trigger via Tailwind animation utilities. */
+  @keyframes reveal-up {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .reveal {
+    animation: reveal-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: var(--reveal-delay, 0ms);
+    opacity: 0;
+  }
+
+  /* Section divider — soft horizontal line with the obsidian surface tint. */
+  .section-divider {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 100%
+    );
+    height: 1px;
+  }
+
+  /* Hindi-chip color (matches Stitch language tag). */
+  .chip-hindi {
+    background: rgba(229, 9, 20, 0.15);
+    color: hsl(7 99% 75%);
+    border: 1px solid rgba(229, 9, 20, 0.35);
+  }
+}
