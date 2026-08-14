@@ -12,15 +12,15 @@ import { SiteFooter } from "@/components/home/site-footer";
 import {
   fetchDiscover,
   fetchTrending,
-  type FetchTrendingResult,
-} from "@/server/services/tmdb.service";
+  type TmdbListResult,
+} from "@/server/tmdb";
 
 // Revalidate every 60s — same as the rails' staleTime. We rebuild the data
 // on the server, so the first paint always has fresh-enough content.
 export const revalidate = 60;
 
 type RailData = {
-  items: FetchTrendingResult["items"];
+  items: TmdbListResult["items"];
   error?: string;
 };
 
@@ -36,7 +36,7 @@ type RailData = {
  * round-trip to render anything.
  */
 async function safeFetch(
-  fetcher: () => Promise<FetchTrendingResult>,
+  fetcher: () => Promise<TmdbListResult>,
 ): Promise<RailData> {
   try {
     const r = await fetcher();

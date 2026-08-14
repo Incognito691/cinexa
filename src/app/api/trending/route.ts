@@ -1,5 +1,5 @@
 import { fail, ok } from "@/server/http/response";
-import { fetchTrending } from "@/server/services/tmdb.service";
+import { fetchTrending } from "@/server/tmdb";
 
 export async function GET(request: Request) {
   try {
