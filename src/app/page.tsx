@@ -14,10 +14,15 @@ import {
   fetchTrending,
   type TmdbListResult,
 } from "@/server/tmdb";
+import { buildMetadata } from "@/lib/metadata";
 
 // Revalidate every 60s — same as the rails' staleTime. We rebuild the data
 // on the server, so the first paint always has fresh-enough content.
 export const revalidate = 60;
+
+// No `title` — the home page uses the root default rather than the
+// "%s · Cinexa" template, so it reads as the brand landing page.
+export const metadata = buildMetadata({ path: "/" });
 
 type RailData = {
   items: TmdbListResult["items"];
