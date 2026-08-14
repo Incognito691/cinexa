@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { ExploreView } from "@/components/explore/explore-view";
+import { ExploreView } from "@/features/explore";
 
 export const dynamic = "force-dynamic";
 

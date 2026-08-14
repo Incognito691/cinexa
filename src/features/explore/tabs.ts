@@ -4,9 +4,9 @@
  * handler can all reference the same source of truth.
  */
 
-import type { ExploreTab } from "@/lib/schemas/explore";
+import type { ExploreTab } from "./schemas";
 
-export type { ExploreTab } from "@/lib/schemas/explore";
+export type { ExploreTab } from "./schemas";
 
 export interface TabMeta {
   id: ExploreTab;

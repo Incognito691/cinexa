@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { buildExploreHref } from "@/lib/explore-presets";
+import { buildExploreHref } from "../lib/presets";
 
 interface GenreTile {
   id: number;
