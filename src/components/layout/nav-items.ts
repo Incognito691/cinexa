@@ -7,7 +7,7 @@ import {
   LogOut,
   PlayCircle,
   Settings,
-  Clock,
+  Sparkles,
   Library,
   type LucideIcon,
 } from "lucide-react";
@@ -23,12 +23,12 @@ export interface NavItem {
 export const primaryNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home },
   { label: "Explore", href: "/explore", icon: Compass },
+  { label: "AI Chat", href: "/ai", icon: Sparkles },
 ];
 
 export const libraryNav: NavItem[] = [
   { label: "Favourites", href: "/favourites", icon: Heart },
   { label: "Continue Watching", href: "/continue-watching", icon: PlayCircle },
-  { label: "Recently Added", icon: Clock, comingSoon: true },
   { label: "My Collections", href: "/my-collection", icon: Folder },
   { label: "Downloads", icon: Download, comingSoon: true },
 ];

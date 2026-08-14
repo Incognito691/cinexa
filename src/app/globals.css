@@ -260,6 +260,55 @@
     height: 1px;
   }
 
+  /* ─────────────────────────── Aurora ───────────────────────────
+     Slow drifting colour blooms. Three offset blobs under a heavy blur
+     read as moving light rather than as shapes — the long, prime-ish
+     durations keep them from visibly resyncing. */
+  @keyframes aurora-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    33% {
+      transform: translate3d(7%, -9%, 0) scale(1.18);
+    }
+    66% {
+      transform: translate3d(-6%, 7%, 0) scale(0.92);
+    }
+  }
+
+  .aurora-blob {
+    filter: blur(90px);
+    animation: aurora-drift 26s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  @keyframes typing-dot {
+    0%,
+    60%,
+    100% {
+      opacity: 0.25;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  .typing-dot {
+    animation: typing-dot 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora-blob,
+    .typing-dot,
+    .reveal {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
   /* Hindi-chip color (matches Stitch language tag). */
   .chip-hindi {
     background: rgba(229, 9, 20, 0.15);
