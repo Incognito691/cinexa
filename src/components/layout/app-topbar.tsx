@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { TABS } from "@/components/explore/tabs";
+import { TABS } from "@/features/explore";
 import { ThemeToggle } from "./theme-toggle";
 
 interface AppTopbarProps {

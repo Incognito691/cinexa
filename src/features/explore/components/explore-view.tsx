@@ -7,8 +7,8 @@ import { useMemo } from "react";
 import { X } from "lucide-react";
 
 import { getExploreFilters, type ExploreTab } from "@/lib/api-client";
-import { buildExploreHref } from "@/lib/explore-presets";
-import { getTabMeta } from "./tabs";
+import { buildExploreHref } from "../lib/presets";
+import { getTabMeta } from "../tabs";
 import { BrowseByGenre } from "./browse-by-genre";
 import { CardGrid } from "./card-grid";
 import { Pagination } from "./pagination";

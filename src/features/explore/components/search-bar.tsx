@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { buildExploreHref } from "@/lib/explore-presets";
+import { buildExploreHref } from "../lib/presets";
 
 interface SearchBarProps {
   /** Initial value (e.g. when arriving from a previous search). */

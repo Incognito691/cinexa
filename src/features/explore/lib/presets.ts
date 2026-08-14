@@ -1,4 +1,4 @@
-import type { ExploreTab } from "@/lib/schemas/explore";
+import type { ExploreTab } from "../schemas";
 
 /**
  * Quick-filter presets surfaced as glass pills on the explore landing page.

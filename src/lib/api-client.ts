@@ -1,6 +1,6 @@
 import type { ApiResponse, ListPayload } from "@/types/api";
 
-import type { ExploreTab } from "@/lib/schemas/explore";
+import type { ExploreTab } from "@/features/explore/schemas";
 
 async function request<T>(path: string): Promise<T> {
   const response = await fetch(path);
@@ -13,7 +13,7 @@ async function request<T>(path: string): Promise<T> {
   return body.data;
 }
 
-export type { ExploreTab } from "@/lib/schemas/explore";
+export type { ExploreTab } from "@/features/explore/schemas";
 
 export interface ExploreFilters {
   /** "movies" | "tv" | "anime" | "trending" — UI tab. The orchestrator maps to TMDB params. */
