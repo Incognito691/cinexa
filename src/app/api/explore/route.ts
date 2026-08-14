@@ -7,7 +7,7 @@ import {
   type TmdbListResult,
 } from "@/server/tmdb";
 import { fetchTrending } from "@/server/tmdb";
-import { exploreTabSchema } from "@/lib/schemas/explore";
+import { exploreTabSchema } from "@/features/explore/schemas";
 
 const exploreQuerySchema = z.object({
   tab: exploreTabSchema.default("movies"),

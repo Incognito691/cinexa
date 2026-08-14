@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { EXPLORE_PRESETS } from "@/lib/explore-presets";
+import { EXPLORE_PRESETS } from "../lib/presets";
 
 /**
  * Row of glass-pill quick-filter chips rendered under the search bar.
