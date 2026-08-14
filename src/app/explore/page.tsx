@@ -1,8 +1,19 @@
 import { Suspense } from "react";
 
 import { ExploreView } from "@/features/explore";
+import { buildMetadata } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
+
+// noIndex: every filter combination is its own URL, and indexing the whole
+// cross-product would flood the index with near-duplicate pages.
+export const metadata = buildMetadata({
+  title: "Explore",
+  description:
+    "Browse movies, TV shows, and anime by genre, year, and rating — or search the full catalogue.",
+  path: "/explore",
+  noIndex: true,
+});
 
 /**
  * /explore — landing + filtered-results experience in a single page.
