@@ -57,10 +57,3 @@ export const searchQuerySchema = z.object({
   type: z.enum(["multi", "movie", "tv"]).default("multi"),
   page: pageSchema,
 });
-
-export const watchTypeSchema = z.enum(["movie", "tv"]);
-
-export const tvPlaybackQuerySchema = z.object({
-  season: z.coerce.number().int().min(1).default(1),
-  episode: z.coerce.number().int().min(1).default(1),
-});
