@@ -1,5 +1,5 @@
 import { runPipeline } from "@/server/filter/pipeline";
-import { fetchMovieDetailForFilter, fetchTvDetailForFilter } from "@/server/services/tmdb.service";
+import { fetchMovieDetailForFilter, fetchTvDetailForFilter } from "@/server/tmdb";
 import { fail, ok } from "@/server/http/response";
 
 /**

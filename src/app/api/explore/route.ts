@@ -4,9 +4,9 @@ import { fail, ok } from "@/server/http/response";
 import {
   fetchDiscover,
   fetchSearch,
-  type FetchTrendingResult,
-} from "@/server/services/explore.service";
-import { fetchTrending } from "@/server/services/tmdb.service";
+  type TmdbListResult,
+} from "@/server/tmdb";
+import { fetchTrending } from "@/server/tmdb";
 import { exploreTabSchema } from "@/lib/schemas/explore";
 
 const exploreQuerySchema = z.object({
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
     const { tab, page, genre, sortBy, q } = parsed.data;
 
-    let data: FetchTrendingResult;
+    let data: TmdbListResult;
 
     if (tab === "trending") {
       // Trending bypasses discover/search; ignores other params.

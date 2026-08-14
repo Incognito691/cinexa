@@ -1,5 +1,5 @@
 import { fail, ok } from "@/server/http/response";
-import { fetchMovieVideos } from "@/server/services/tmdb.service";
+import { fetchMovieVideos } from "@/server/tmdb";
 
 export async function GET(
   _: Request,

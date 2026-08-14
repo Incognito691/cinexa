@@ -1,6 +1,7 @@
 import type { MediaCardItem, MediaType } from "@/types/media";
 
-interface TmdbListItem {
+/** Raw TMDB list-endpoint item, before mapping. */
+export interface TmdbListItemRaw {
   id: number;
   title?: string;
   name?: string;
@@ -31,7 +32,7 @@ export interface MediaFilterItem extends MediaCardItem {
   keywordNames: string[];
 }
 
-export function mapTmdbListItem(item: TmdbListItem): MediaFilterItem {
+export function mapTmdbListItem(item: TmdbListItemRaw): MediaFilterItem {
   const mediaType: MediaType = item.media_type ?? (item.name ? "tv" : "movie");
   return {
     id: item.id,
