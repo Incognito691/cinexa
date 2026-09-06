@@ -84,47 +84,41 @@ function NavRow({ item, expanded, onNavigate }: NavRowProps) {
 
   if (!hasHref) {
     return (
-      <li>
-        <span
-          aria-disabled
-          aria-label={item.label}
-          title={!expanded ? item.label : undefined}
-          className={cn(rowClass, "cursor-not-allowed opacity-50")}
-        >
-          {content}
-        </span>
-      </li>
+      <span
+        aria-disabled
+        aria-label={item.label}
+        title={!expanded ? item.label : undefined}
+        className={cn(rowClass, "cursor-not-allowed opacity-50")}
+      >
+        {content}
+      </span>
     );
   }
 
   if (item.external) {
     return (
-      <li>
-        <a
-          href={item.href}
-          aria-label={item.label}
-          title={!expanded ? item.label : undefined}
-          onClick={onNavigate}
-          className={cn(rowClass, "text-foreground/80")}
-        >
-          {content}
-        </a>
-      </li>
-    );
-  }
-
-  return (
-    <li>
-      <Link
-        href={item.href!}
+      <a
+        href={item.href}
         aria-label={item.label}
         title={!expanded ? item.label : undefined}
         onClick={onNavigate}
         className={cn(rowClass, "text-foreground/80")}
       >
         {content}
-      </Link>
-    </li>
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      href={item.href!}
+      aria-label={item.label}
+      title={!expanded ? item.label : undefined}
+      onClick={onNavigate}
+      className={cn(rowClass, "text-foreground/80")}
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -133,9 +127,7 @@ function CollapsedNavRow({ item, onNavigate }: NavRowProps) {
     <li>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span>
-            <NavRow item={item} expanded={false} onNavigate={onNavigate} />
-          </span>
+          <NavRow item={item} expanded={false} onNavigate={onNavigate} />
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
           {item.label}
@@ -159,12 +151,9 @@ function NavList({
     <ul className="flex flex-col gap-0.5">
       {items.map((item) =>
         expanded ? (
-          <NavRow
-            key={item.label}
-            item={item}
-            expanded={expanded}
-            onNavigate={onNavigate}
-          />
+          <li key={item.label}>
+            <NavRow item={item} expanded={expanded} onNavigate={onNavigate} />
+          </li>
         ) : (
           <CollapsedNavRow
             key={item.label}

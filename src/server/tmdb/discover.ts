@@ -18,6 +18,8 @@ export interface FetchDiscoverParams {
   language?: string;
   /** Comma-separated TMDB genre IDs (e.g. "18" or "18,10765"). */
   withGenres?: string;
+  /** ISO 3166-1 country of origin, e.g. "KR". Not the same as `region`. */
+  originCountry?: string;
   year?: number;
   /** Override the default sort (e.g. popularity.desc, vote_average.desc). */
   sortBy?: string;
@@ -43,6 +45,7 @@ export async function fetchDiscover(
     params.forceDiscover ||
     Boolean(params.language) ||
     Boolean(params.withGenres) ||
+    Boolean(params.originCountry) ||
     params.year != null ||
     Boolean(params.sortBy);
 
@@ -58,6 +61,7 @@ export async function fetchDiscover(
       region: params.region,
       with_original_language: params.language,
       with_genres: params.withGenres,
+      with_origin_country: params.originCountry,
       ...(params.year != null ? { [yearParamFor(params.type)]: params.year } : {}),
     },
     // Filtered rails cache shorter so a pipeline fix surfaces sooner.

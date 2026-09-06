@@ -26,6 +26,12 @@ export {
   fetchMovieCast,
   fetchMovieDetailForFilter,
   fetchTvDetailForFilter,
+  fetchTitleDetail,
+  fetchMoviePage,
+  fetchTvPage,
   type VideoItem,
   type CastMember,
+  type TitleDetail,
+  type MoviePage,
+  type TvPage,
 } from "./details";

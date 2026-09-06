@@ -1,0 +1,82 @@
+{
+  "tv:108978": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:22980": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:5920": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "tv:291": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:125988": {
+    "class": "MATURE",
+    "confidence": 0.9
+  },
+  "tv:65282": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:113962": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:456": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:97546": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "tv:59941": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:2734": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:63770": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:4057": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:117217": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "tv:2261": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:94722": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:79744": {
+    "class": "MATURE",
+    "confidence": 0.9
+  },
+  "tv:1399": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:502": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:1433": {
+    "class": "SAFE",
+    "confidence": 0.85
+  }
+}

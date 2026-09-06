@@ -1,5 +1,6 @@
 import type { FilterDecision, FilterInput } from "./types";
 import { runPipeline } from "./pipeline";
+import { prefetchAiClassifications } from "./layers/layer-9-ai";
 
 /**
  * Glues the filter into the existing TMDB service. Two entry points because
@@ -44,15 +45,19 @@ export type ListLevelItem = {
 export async function applyContentFilterListLevel<T extends ListLevelItem>(
   items: T[],
 ): Promise<T[]> {
-  const decisions = await Promise.all(
-    items.map((it) => runPipeline(toFilterInput(it))),
-  );
+  const inputs = items.map(toFilterInput);
+  // One batched AI call warms the cache for the whole page, so the per-item
+  // pipeline below can consult Layer 9 on every title without firing a
+  // request per title. No-op when the key is unset or the breaker is open.
+  await prefetchAiClassifications(inputs);
+  const decisions = await Promise.all(inputs.map(runPipeline));
   return items.filter((_, i) => decisions[i].visible);
 }
 
 export async function applyContentFilterFull<T extends FilterInput>(
   items: T[],
 ): Promise<T[]> {
+  await prefetchAiClassifications(items);
   const decisions = await Promise.all(items.map(runPipeline));
   return items.filter((_, i) => decisions[i].visible);
 }

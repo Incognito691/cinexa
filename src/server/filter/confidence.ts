@@ -166,12 +166,19 @@ export function decide(layers: LayerResult[]): FilterDecision {
 }
 
 /**
- * Decide whether to invoke the AI (Layer 9).
+ * Decide whether to consult the AI (Layer 9).
  *
- * 90 / 5 split:
- *   - Decisive: L7 hit OR L2/L3 hit OR score ≥ 0.85 OR score ≤ 0.3 → skip AI.
- *   - Ambiguous: L4 hit with moderate score, OR L1 hit with low corroborating score,
- *     OR L5 mid-range — invoke AI.
+ * This used to require the deterministic layers to *already* suspect an item
+ * (`score <= 0.3 → skip`), which meant the AI could only ever confirm a hunch,
+ * never find anything on its own. Every layer that runs at list level keys off
+ * English phrases or the TMDB `adult` flag, so Korean/Japanese/Hindi softcore —
+ * `adult=false`, neutral overview, sometimes no overview at all — scored a flat
+ * 0 and was declared SAFE without the model ever seeing it.
+ *
+ * The gate is now inverted: silence from the deterministic layers is a reason
+ * to ask, not a reason to skip. Only a decisive verdict short-circuits.
+ * `prefetchAiClassifications` batches the whole page into one request, so
+ * "ask more often" costs one API call per page rather than one per title.
  */
 export function shouldInvokeAI(
   layers: LayerResult[],
@@ -181,29 +188,12 @@ export function shouldInvokeAI(
   if (hasL7Block) return false;
 
   const hasIdMatchBlock = layers.some(
-    (l) =>
-      (l.layer === 2 || l.layer === 3) && l.decision === "BLOCK",
+    (l) => (l.layer === 2 || l.layer === 3) && l.decision === "BLOCK",
   );
   if (hasIdMatchBlock) return false;
 
-  if (score >= 0.85 || score <= 0.3) return false;
+  // Already blocked on deterministic evidence — the model can't add anything.
+  if (score >= 0.85) return false;
 
-  const l1 = layers.find((l) => l.layer === 1);
-  const l4 = layers.find((l) => l.layer === 4);
-  const l5 = layers.find((l) => l.layer === 5);
-  const l6 = layers.find((l) => l.layer === 6);
-
-  // L1 fired but no other corroboration → ask AI (this is the most common L1-only case).
-  if (l1?.class === "PORNOGRAPHIC" && score < 0.85) return true;
-
-  // L4 fired → AI can validate.
-  if (l4?.decision === "BLOCK") return true;
-
-  // L5 mid-range → AI can disambiguate.
-  if (l5 && l5.confidence >= 0.4 && l5.confidence < 0.85) return true;
-
-  // L6 says adult-leaning genre → AI validates.
-  if (l6?.class === "EROTIC") return true;
-
-  return false;
+  return true;
 }

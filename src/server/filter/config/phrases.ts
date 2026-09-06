@@ -42,6 +42,26 @@ export const TEXT_STRONG_SIGNALS: readonly string[] = [
   "nuefliks originals",
   "hotx originals",
   "fliz movies originals",
+  // Regional softcore premises. These are title/plot constructions that
+  // essentially only occur in sexploitation lines (the Korean "친구 누나" /
+  // wife-swap series and their Japanese and Chinese equivalents), so they
+  // carry full weight on their own.
+  "wife swap",
+  "wife swapping",
+  "swapping wives",
+  "exchange wife",
+  "erotic drama",
+  "erotic romance",
+  "erotic tale",
+  "sexploitation",
+  "adult video",
+  "adult web series",
+  "friend's older sister",
+  "friend's sister",
+  "friend's mom",
+  "friend's mother",
+  "friend's wife",
+  "my wife's sister",
 ];
 
 export const TEXT_SOFT_SIGNALS: readonly string[] = [
@@ -86,6 +106,38 @@ export const TEXT_SOFT_SIGNALS: readonly string[] = [
   "pregnant by",
   "illegitimate child",
   "illegitimate baby",
+  // Softcore vocabulary. Individually these all appear in legitimate cinema
+  // ("adultery" in a courtroom drama, "stepmother" in a fairy tale), so none
+  // is decisive at +0.4 — but any hit now routes the title to the AI layer
+  // instead of letting it through unexamined, which is the point.
+  "adultery",
+  "adulterous",
+  "extramarital",
+  "infidelity",
+  "passionate affair",
+  "illicit affair",
+  "illicit relationship",
+  "love affair with",
+  "one night stand",
+  "sexual desire",
+  "sexual relationship",
+  "sexual awakening",
+  "sensual",
+  "lustful",
+  "carnal",
+  "underwear",
+  "lingerie",
+  "voyeur",
+  "peeping",
+  "sister-in-law",
+  "brother's wife",
+  "stepmother",
+  "stepson",
+  "stepdaughter",
+  "massage parlor",
+  "call girl",
+  "escort service",
+  "hostess bar",
 ];
 
 export const TEXT_STORYTELLING_SIGNALS: readonly string[] = [

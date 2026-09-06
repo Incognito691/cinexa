@@ -15,6 +15,8 @@ const exploreQuerySchema = z.object({
   genre: z.coerce.number().int().positive().optional(),
   sortBy: z.string().trim().min(1).optional(),
   q: z.string().trim().min(1).optional(),
+  /** ISO 3166-1 alpha-2 country of origin, e.g. "KR". */
+  country: z.string().trim().length(2).toUpperCase().optional(),
 });
 
 /**
@@ -38,10 +40,11 @@ export async function GET(request: Request) {
       genre: searchParams.get("genre") ?? undefined,
       sortBy: searchParams.get("sort_by") ?? undefined,
       q: searchParams.get("q") ?? undefined,
+      country: searchParams.get("country") ?? undefined,
     });
     if (!parsed.success) return fail("Invalid explore query", 422);
 
-    const { tab, page, genre, sortBy, q } = parsed.data;
+    const { tab, page, genre, sortBy, q, country } = parsed.data;
 
     let data: TmdbListResult;
 
@@ -62,6 +65,7 @@ export async function GET(request: Request) {
           ...tabConfig.genres,
           ...(genre != null ? [String(genre)] : []),
         ].join(",") || undefined,
+        originCountry: country,
         language: tabConfig.defaultLanguage,
         sortBy,
         forceDiscover: true,
