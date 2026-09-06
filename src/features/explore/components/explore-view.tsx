@@ -10,7 +10,10 @@ import { getExploreFilters } from "../api";
 import type { ExploreTab } from "../schemas";
 import { buildExploreHref } from "../lib/presets";
 import { getTabMeta } from "../tabs";
+import { countryName } from "../lib/countries";
+import { BrowseByCountry } from "./browse-by-country";
 import { BrowseByGenre } from "./browse-by-genre";
+import { BrowseByType } from "./browse-by-type";
 import { CardGrid } from "./card-grid";
 import { Pagination } from "./pagination";
 import { QuickFilterChips } from "./quick-filter-chips";
@@ -43,12 +46,13 @@ export function ExploreView(_: ExploreViewProps) {
         : undefined,
       sortBy: searchParams.get("sort_by") ?? undefined,
       q: searchParams.get("q") ?? undefined,
+      country: searchParams.get("country") ?? undefined,
       page: Number(searchParams.get("page") ?? "1"),
     };
   }, [searchParams]);
 
   const hasActiveFilters = Boolean(
-    (filters.genre != null) || filters.sortBy || filters.q,
+    (filters.genre != null) || filters.sortBy || filters.q || filters.country,
   );
 
   if (!hasActiveFilters) {
@@ -72,7 +76,11 @@ function ExploreLanding({ tab }: { tab: ExploreTab }) {
 
       <QuickFilterChips />
 
+      <BrowseByType />
+
       <BrowseByGenre />
+
+      <BrowseByCountry tab={tab} />
     </div>
   );
 }
@@ -84,6 +92,7 @@ interface ResultsFilters {
   genre?: number;
   sortBy?: string;
   q?: string;
+  country?: string;
   page: number;
 }
 
@@ -97,6 +106,7 @@ function ExploreResults({ filters }: { filters: ResultsFilters }) {
       filters.genre ?? null,
       filters.sortBy ?? null,
       filters.q ?? null,
+      filters.country ?? null,
       filters.page,
     ],
     queryFn: () => getExploreFilters(filters),
@@ -114,6 +124,7 @@ function ExploreResults({ filters }: { filters: ResultsFilters }) {
     if (filters.genre != null) params.set("genre", String(filters.genre));
     if (filters.sortBy) params.set("sort_by", filters.sortBy);
     if (filters.q) params.set("q", filters.q);
+    if (filters.country) params.set("country", filters.country);
     if (nextPage > 1) params.set("page", String(nextPage));
     const qs = params.toString();
     return qs ? `/explore?${qs}` : "/explore";
@@ -205,6 +216,9 @@ function describeActiveFilter(filters: ResultsFilters): {
 } | null {
   if (filters.q) {
     return { label: `Search: "${filters.q}"` };
+  }
+  if (filters.country) {
+    return { label: `Country: ${countryName(filters.country)}` };
   }
   if (filters.genre != null) {
     return { label: `Genre #${filters.genre}` };

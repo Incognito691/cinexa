@@ -12,6 +12,8 @@ export interface ExploreFilters {
   sortBy?: string;
   /** Search term; routes through TMDB /search when present. */
   q?: string;
+  /** ISO 3166-1 alpha-2 country of origin, e.g. "KR". */
+  country?: string;
   page: number;
 }
 
@@ -34,6 +36,7 @@ export function getExploreFilters(
   if (filters.genre != null) params.set("genre", String(filters.genre));
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
   if (filters.q) params.set("q", filters.q);
+  if (filters.country) params.set("country", filters.country);
   return request<ListPayload>(`/api/explore?${params.toString()}`);
 }
 

@@ -316,3 +316,31 @@
     border: 1px solid rgba(229, 9, 20, 0.35);
   }
 }
+/* ── View transitions ──────────────────────────────────────────────
+   Used when the episode list expands. Each card needs a *unique*
+   `view-transition-name` for the browser to pair it across the state change,
+   so `view-transition-class` is what lets one rule tune all of them. Browsers
+   without class support still animate, just with the default timing. */
+.vt-episode {
+  view-transition-class: episode;
+}
+
+::view-transition-group(.episode) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Everything not individually named lives in the root snapshot; keep its
+   cross-fade short so it never lags behind the cards. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

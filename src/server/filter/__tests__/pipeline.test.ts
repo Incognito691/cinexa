@@ -59,16 +59,17 @@ describe("filter pipeline — list level", () => {
     expect(decision.visible).toBe(true);
   });
 
-  it("AI is not invoked (no OPENAI_API_KEY in test env)", async () => {
+  it("AI is a no-op without an API key, and never blocks the pipeline", async () => {
     // Use "Pink" (adult=true, mainstream) — NOT whitelisted, NOT blacklisted —
-    // so the pipeline runs through every layer. We verify L9 reports
-    // "not invoked" without OPENAI_API_KEY set.
+    // so the pipeline runs through every layer.
     // (Whitelisted Title and Inception short-circuit at L8 before L9 ever
     // runs, so they wouldn't have L9 in `decision.layers`.)
     const input = list.find((it) => it.title === "Pink")!;
     const decision = await runPipeline(input);
     const l9 = decision.layers.find((l) => l.layer === 9);
-    expect(l9?.reason).toMatch(/not invoked/i);
+    expect(l9?.reason).toMatch(/disabled \(no GEMINI_API_KEY\)/i);
+    expect(l9?.decision).toBe("NEUTRAL");
+    expect(l9?.confidence).toBe(0);
   });
 });
 
