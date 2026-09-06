@@ -128,13 +128,31 @@ describe("text-analysis helpers", () => {
 });
 
 describe("shouldInvokeAI", () => {
-  it("returns false when score is decisive", () => {
+  it("returns false once the deterministic layers already block", () => {
     const layers = [
       { layer: 1 as const, decision: "PASS" as const, confidence: 0, reason: "x" },
       { layer: 5 as const, decision: "PASS" as const, confidence: 0, reason: "y" },
     ];
-    expect(shouldInvokeAI(layers, 0.2)).toBe(false);
     expect(shouldInvokeAI(layers, 0.95)).toBe(false);
+  });
+
+  it("returns false on a manual blacklist or network/company match", () => {
+    const l7 = [{ layer: 7 as const, decision: "BLOCK" as const, confidence: 1, reason: "blacklist" }];
+    expect(shouldInvokeAI(l7, 0.2)).toBe(false);
+
+    const l3 = [{ layer: 3 as const, decision: "BLOCK" as const, confidence: 1, reason: "company" }];
+    expect(shouldInvokeAI(l3, 0.2)).toBe(false);
+  });
+
+  // The regression this whole layer exists for: non-English softcore trips
+  // none of the deterministic layers, so it scores 0. Silence has to mean
+  // "ask the model", not "declare it safe".
+  it("returns true when no deterministic layer found anything", () => {
+    const layers = [
+      { layer: 1 as const, decision: "PASS" as const, confidence: 0, reason: "no adult flag" },
+      { layer: 5 as const, decision: "PASS" as const, confidence: 0, reason: "text score 0.00" },
+    ];
+    expect(shouldInvokeAI(layers, 0)).toBe(true);
   });
 
   it("returns true when L1 hits and score is mid-range", () => {

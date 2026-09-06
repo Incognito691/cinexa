@@ -6,6 +6,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 import { AppSidebar, SidebarContent } from "./app-sidebar";
+import { PageTransition } from "./page-transition";
 import { AppTopbar } from "./app-topbar";
 import { usePersistedFlag } from "@/hooks/use-persisted-flag";
 
@@ -73,7 +74,7 @@ export function AppShell({ children }: AppShellProps) {
       >
         <AppTopbar onMenuClick={() => setMobileOpen(true)} />
         <main className="flex-1 px-1 pb-16 pt-4 sm:px-3 lg:px-4">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>
