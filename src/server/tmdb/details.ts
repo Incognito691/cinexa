@@ -180,6 +180,32 @@ interface TmdbTitleDetailRaw {
   credits?: { cast?: TmdbCastMemberRaw[] };
   videos?: { results?: TmdbVideoRaw[] };
   similar?: { results?: TmdbListItemRaw[] };
+  recommendations?: { results?: TmdbListItemRaw[] };
+}
+
+/**
+ * The "more like this" grid, for either media type.
+ *
+ * Recommendations first, `similar` only as a fallback: TMDB's `similar` is
+ * keyword/genre matching and comes back **empty** for most regional or
+ * recently-added titles, which is why plenty of movie pages rendered no
+ * related grid at all. Recommendations are behavioural and nearly always
+ * populated. Both go through the content filter — a blocked title must not
+ * reappear as a recommendation on a clean one's page.
+ */
+async function relatedTitles(
+  raw: TmdbTitleDetailRaw,
+  type: "movie" | "tv",
+): Promise<MediaCardItem[]> {
+  const results = raw.recommendations?.results?.length
+    ? raw.recommendations.results
+    : (raw.similar?.results ?? []);
+
+  return (
+    await applyContentFilterListLevel(
+      results.map((r) => mapTmdbListItem({ ...r, media_type: type })),
+    )
+  ).slice(0, 12);
 }
 
 /**
@@ -282,7 +308,11 @@ function mapCompanies(
 export async function fetchMoviePage(
   id: number | string,
 ): Promise<MoviePage | null> {
-  const result = await fetchTitleRaw("movie", id, "credits,videos,similar");
+  const result = await fetchTitleRaw(
+    "movie",
+    id,
+    "credits,videos,similar,recommendations",
+  );
   if (!result) return null;
   const { detail, raw } = result;
 
@@ -305,13 +335,7 @@ export async function fetchMoviePage(
     videos.find((v) => v.site === "YouTube" && v.type === "Teaser") ??
     null;
 
-  // Similar titles go through the same filter as any other list — a blocked
-  // title must not reappear as a recommendation on a clean film's page.
-  const similar = (await applyContentFilterListLevel(
-    (raw.similar?.results ?? []).map((r) =>
-      mapTmdbListItem({ ...r, media_type: "movie" }),
-    ),
-  )).slice(0, 12) satisfies MediaCardItem[];
+  const similar = await relatedTitles(raw, "movie");
 
   return { detail, cast, trailer, similar };
 }
@@ -355,7 +379,7 @@ export async function fetchTvPage(
   const result = await fetchTitleRaw(
     "tv",
     id,
-    `credits,videos,similar,season/${wanted}`,
+    `credits,videos,similar,recommendations,season/${wanted}`,
   );
   if (!result) return null;
   const { detail, raw } = result;
@@ -426,11 +450,7 @@ export async function fetchTvPage(
     videos.find((v) => v.site === "YouTube" && v.type === "Teaser") ??
     null;
 
-  const similar = (await applyContentFilterListLevel(
-    (raw.similar?.results ?? []).map((r) =>
-      mapTmdbListItem({ ...r, media_type: "tv" }),
-    ),
-  )).slice(0, 12) satisfies MediaCardItem[];
+  const similar = await relatedTitles(raw, "tv");
 
   return { detail, cast, trailer, similar, seasons, selectedSeason, episodes };
 }

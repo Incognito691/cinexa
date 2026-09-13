@@ -13,7 +13,8 @@ A movie/TV streaming UI built with Next.js 15 (App Router) + React 19 + Tailwind
   - `TMDB_API_KEY` — the only var the app actually needs to run; every TMDB call reaches it via `requireServerEnv("TMDB_API_KEY")`, which throws at request time if unset
   - `GEMINI_API_KEY` — optional; Google AI Studio key for filter layer 9 (AI). `OPENAI_API_KEY` is still read as a fallback name (that's where the project's Gemini key lives), resolved by `aiApiKey()` in `lib/env.ts`. When neither is set, layer 9 is a hard no-op.
   - **The Gemini free tier allows 20 requests/day.** Verdicts persist to `data/ai-verdicts.json` so each title is classified once ever; that file doubles as the blocklist when quota is gone (see the filter section)
-- `.env.example` also lists `NEXTAUTH_SECRET`, `DATABASE_URL`, `GOOGLE_CLIENT_ID/SECRET`. Nothing reads them yet — auth/db are unbuilt. Add them to `envSchema` when you wire those up.
+- `DATABASE_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID/SECRET` are all validated in `envSchema` and in use. `authConfigured()` gates the sign-in UI so a missing OAuth config hides the button instead of 500ing.
+- **Login is optional by design.** Browsing and playback work signed out; a session only unlocks the personal features (watch history, favourites, collections). Nothing should gate a page on `auth()` — those pages render an empty state with a sign-in prompt instead.
 - `NEXT_PUBLIC_SITE_URL` is the one documented exception to the rule below: it's public by definition and must be inlined at build time, so `lib/metadata.ts` reads it from `process.env` directly.
 - All other server code must go through `requireServerEnv()`, never `process.env` directly.
 
@@ -29,9 +30,13 @@ npm test            # vitest run (single-shot)
 npm run test:watch  # vitest watch
 ```
 
-There is **no `prisma/` directory and no schema** — `npx prisma …` will fail until someone adds one.
+`prisma/schema.prisma` holds the Auth.js models (User/Account/Session/VerificationToken) plus `WatchedItem`, `Favourite`, `CollectionItem` and `CollectionFolder`. The database is Neon Postgres and the tables are live. `npx prisma db push` after schema edits; `npx prisma generate` after a fresh install.
 
-Tests live in `src/**/*.test.ts` (Vitest, node env, `globals: false` so import `describe`/`it`/`expect` from `vitest`). The only suites are `src/server/filter/__tests__/` (pipeline + layers + AI batch + fixtures, 33 tests). Single file: `npx vitest run src/server/filter/__tests__/pipeline.test.ts`.
+**Strip `channel_binding=require` from Neon's connection string.** Prisma's engine doesn't implement SCRAM channel binding and fails with a misleading `P1001 Can't reach database server` — the port is reachable, the handshake isn't. `sslmode=require` still applies.
+
+The IDE's Prisma extension may warn that `url` in the datasource block is unsupported. That's a **Prisma 7** message; this project runs **6.19.3**, where `url = env("DATABASE_URL")` is correct. Don't move it to `prisma.config.ts` without upgrading first.
+
+Tests live in `src/**/*.test.ts` (Vitest, node env, `globals: false` so import `describe`/`it`/`expect` from `vitest`). 55 tests across three suites: `src/server/filter/__tests__/` (pipeline + layers + AI batch + fixtures, 33), `src/server/library.test.ts` (favourites/collections, mocked Prisma, 18), `src/lib/watch-progress.test.ts` (4). Single file: `npx vitest run src/server/filter/__tests__/pipeline.test.ts`.
 
 ## Architecture
 
@@ -57,7 +62,7 @@ The project is **feature-first**. A surface owns its components, its client-side
 - **`features/`** — one folder per surface, each with an `index.ts` public entry point.
   - `home/` — hero, rails, bento grid, footer + `api.ts`
   - `explore/` — view, card grid, search, chips, genre tiles + `api.ts`, `schemas.ts`, `tabs.ts`, `lib/presets.ts`
-  - `continue-watching/` — the home-page rail (placeholder data until persistence lands)
+  - `continue-watching/` — the home-page rail + `/continue-watching`, both fed by `lib/entries.ts` (server-only: it reads history and TMDB, so it stays out of the barrel)
   - `title/` — currently just `api.ts`, the client half of the `/api/movie/[id]/*` routes
 - **`components/`** — shared UI only.
   - `media/media-card.tsx` — **the** poster card, `layout="rail" | "grid"`. Anything listing media renders this.
@@ -77,7 +82,7 @@ The project is **feature-first**. A surface owns its components, its client-side
 1. **A component lives in the feature that uses it.** It only graduates to `components/` when a *second* feature needs it. `MediaRail`, `RailCardSkeleton`, and `SiteFooter` each have one consumer today and stay in `features/home/` — promote them when that changes.
 2. **Cross-feature imports go through `index.ts`**, never into a feature's internals. `app/page.tsx` imports `ContinueWatchingRail` from `@/features/continue-watching`, not from its `components/` folder.
 
-Feature folders are created when they have code, not before. `favourites/`, `collections/`, `watch/`, `ai/`, and `settings/` are all planned and all absent — create them with their first real file.
+Feature folders are created when they have code, not before. `settings/` is planned and absent — create it with its first real file.
 
 ### Content-filter pipeline (`src/server/filter/`)
 
@@ -129,9 +134,36 @@ Known rough edges in this area — read before "fixing" a chip that seems broken
 
 The movie page (`features/title/components/movie-detail-view.tsx`) has Watch Movie + Watch Trailer, box office (budget/revenue/profit, hidden when TMDB has neither figure — it reports unknown as `0`, normalised to `null`), a cast rail, production logos, and a related grid. The trailer modal uses the native `<dialog>` element rather than a modal dependency, and only mounts the YouTube iframe while open. **A blocked title 404s on its detail URL**, so moderation can't be routed around by guessing an ID.
 
-Still 404: `/watch/movie/:id`, `/watch/tv/:id`, `/favourites`, `/continue-watching`, `/my-collection`, `/settings`.
+Still 404: `/settings`.
 
-- `package.json` lists `webtorrent`, `plyr-react`, `next-auth@5.0.0-beta.25`, `@auth/prisma-adapter`, `prisma` — all installed, none imported anywhere in `src/`. No player page, no auth route, no Prisma schema. When adding these, expect `src/app/(player)/…` and `src/app/api/auth/[...nextauth]/route.ts` per the auth.js v5 convention.
+### Favourites and collections (`src/server/library.ts`, `src/features/library/`)
+
+Two independent pools, both keyed on `[userId, tmdbId, mediaType]` so a film and a show can share a TMDB id:
+
+- **`Favourite`** — the heart. Flat list, no organisation, backs `/favourites`.
+- **`CollectionItem`** — "Add to collection". Carries a nullable `folderId`; **null means unfiled, which is where every new save lands**. Folders are an organising layer *over* the collection, not a precondition for joining it.
+- **`CollectionFolder`** — user-named, `@@unique([userId, name])` so a rename can't mint two indistinguishable folders. `onDelete: SetNull` on the item relation means **deleting a folder un-files its titles rather than deleting them** — a folder delete can never cost the user a saved title.
+
+`server/library.ts` mirrors `watch-history.ts`: `"use server"`, signed out is a silent no-op, never a throw.
+
+**Every mutation scopes by `userId` inside the WHERE clause.** Folder and item ids reach the server from the browser, so `update({ where: { id } })` would let any signed-in user rename or delete another user's folder by guessing a cuid. The folder operations therefore use `updateMany`/`deleteMany` for what look like single-row writes — they match zero rows and report "not found" instead. `moveItemToFolder` additionally looks the *destination* folder up by `[id, userId]`, because the item's own scoping says nothing about who owns the folder it's being moved into. `src/server/library.test.ts` pins all of this with a mocked Prisma client; the scoping bugs it catches are invisible in manual testing, where you only ever have one account open.
+
+Client state goes through **one** React Query key (`["library","keys"]`, served by `/api/library/keys`). Every heart on the page reads it, and React Query dedupes the identical query, so a forty-poster grid costs one request rather than forty — and the same title appearing in both a rail and the similar grid stays in sync without either button knowing the other exists. Toggles are optimistic with rollback. The payload carries `signedIn` because empty arrays alone can't distinguish "signed out" from "signed in, nothing saved", and the button needs that to choose between acting and linking to sign-in.
+
+`/my-collection`'s **Manage** dialog (`features/library/components/manage-collection.tsx`) does create/rename/delete folder, file/unfile, and remove. It uses a `<select>` rather than drag-and-drop — same capability, no dependency, and it works with a keyboard and on a phone for free. Unlike the heart it is *not* optimistic: each action awaits its server action then `router.refresh()`es, which is the right trade for a modal opened occasionally.
+
+`features/library/lib/entries.ts` hydrates stored TMDB ids into poster cards, one cached detail request each, and **drops any title the content filter now blocks** — so saving something is not a way to keep access to it after moderation rejects it.
+
+### Watch progress
+
+The player is a cross-origin iframe, so progress only exists if the provider hands it over. **VidLink** (`SOURCES[0]`) posts `{ type: "PLAYER_EVENT", data: { currentTime, duration } }` and accepts `?startAt=`; SuperEmbed and VidSrc post nothing and can't seek, so on those two a title still reaches Continue Watching (via the dwell timer) but with no bar and no resume.
+
+- `WatchTracker` (rendered by `WatchView` for both media types) listens for messages from `progressOrigin` only, then flushes to `POST /api/watch/progress` every 15s and again on `pagehide` — a **route** rather than a server action because only `sendBeacon` survives the navigation.
+- `WatchedItem.positionSeconds` / `.runtimeSeconds` hold it. `runtimeSeconds = 0` means *unknown*, never 0% — the UI drops the bar instead.
+- Thresholds live in `lib/watch-progress.ts` (shared: `"use server"` modules can only export async functions, and client code can't import from `server/`). Past `FINISHED_RATIO` a movie leaves the rail and an episode's card points at the **next** episode; `/watch/tv/:id` redirects a past-the-end episode into the next season, which is what makes that safe without another TMDB call.
+- The dwell timer still exists as the fallback for the two silent providers. It lives in `EpisodeNav` for TV (it also drives the watched tick) and in `WatchTracker` for movies — hence `dwellFallback`.
+
+- `package.json` still lists `webtorrent` and `plyr-react`, neither imported anywhere in `src/` — playback is embeds only (see the note in `features/watch/lib/sources.ts` on why browser WebTorrent can't reach YTS swarms).
 - Planned order: persistence (Prisma + Postgres + next-auth) → title detail → AI (a "because you watched" home rail plus an `/ai` chat page, movies only, on the existing `OPENAI_API_KEY` following the fetch pattern in `filter/layers/layer-9-ai.ts`) → watch/player → settings.
 - `next.config.ts` whitelists TMDB, gstatic, Unsplash, and `via.placeholder.com` for `next/image` remote patterns.
 
