@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { TvDetailView } from "@/features/title";
-import { buildMetadata } from "@/lib/metadata";
-import { tmdbImage } from "@/lib/env";
+import { buildMetadata, buildTitleMetadata } from "@/lib/metadata";
 import { fetchTvPage } from "@/server/tmdb";
 
 interface PageProps {
@@ -28,17 +27,9 @@ export async function generateMetadata({ params }: PageProps) {
   const page = await load(params).catch(() => null);
   if (!page) return buildMetadata({ title: "Not found", noIndex: true });
 
-  const { detail } = page;
-  const backdrop = detail.backdropPath
-    ? tmdbImage(detail.backdropPath, "w1280")
-    : undefined;
-
-  return buildMetadata({
-    title: detail.title,
-    description: detail.overview.slice(0, 200) || undefined,
-    path: `/tv/${detail.id}`,
-    images: backdrop ? [backdrop] : undefined,
-  });
+  // Canonical is the season-less `/tv/:id` — `?season=2` is the same show, and
+  // letting each season mint its own canonical splits the page's ranking.
+  return buildTitleMetadata(page.detail);
 }
 
 export default async function Page({ params, searchParams }: PageProps) {

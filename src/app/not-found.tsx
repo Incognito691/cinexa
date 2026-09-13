@@ -1,5 +1,15 @@
 import Link from "next/link";
 
+import { buildMetadata } from "@/lib/metadata";
+
+// Without this the 404 inherits the root title and description and is
+// indexable — a soft-404 that search engines will happily list.
+export const metadata = buildMetadata({
+  title: "Not found",
+  description: "That page or title isn’t available on Cinexa.",
+  noIndex: true,
+});
+
 export default function NotFound() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
