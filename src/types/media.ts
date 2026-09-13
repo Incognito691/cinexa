@@ -12,6 +12,50 @@ export interface MediaCardItem {
   popularity: number;
 }
 
+/**
+ * Which titles the signed-in user has hearted or collected, as
+ * `${mediaType}:${tmdbId}` keys.
+ *
+ * Keys rather than rows because the only thing the client does with this is
+ * `set.has(...)` per card, and both arrays are empty when signed out.
+ */
+export interface LibraryKeys {
+  favourites: string[];
+  collected: string[];
+  /**
+   * Empty arrays are ambiguous on their own — signed out and signed in with
+   * nothing saved look identical — and the buttons need to tell them apart to
+   * choose between "save this" and "sign in to save this".
+   */
+  signedIn: boolean;
+}
+
+/**
+ * What a library mutation tells the UI. `error` is written for the user and is
+ * safe to render verbatim.
+ */
+export type LibraryResult = { ok: true } | { ok: false; error: string };
+
+/** A collection folder as the manage UI sees it. */
+export interface CollectionFolderRow {
+  id: string;
+  name: string;
+  itemCount: number;
+}
+
+/**
+ * A collected title with its artwork resolved.
+ *
+ * `id` is the `CollectionItem` row id — what the manage UI moves between
+ * folders — not the TMDB id, which lives on `card`. Two different numbers that
+ * would be easy to confuse if the entry carried only one of them.
+ */
+export interface CollectionEntry {
+  id: string;
+  folderId: string | null;
+  card: MediaCardItem;
+}
+
 export interface TmdbPaginatedResult<T> {
   page: number;
   total_pages: number;
