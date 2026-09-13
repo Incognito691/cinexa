@@ -1,5 +1,6 @@
 import {
   BentoGrid,
+  RecommendedRail,
   Hero,
   NowPlayingRail,
   SiteFooter,
@@ -107,6 +108,8 @@ export default async function HomePage() {
       {/* Stitch "Obsidian Cinema" landing sections — in canonical order. */}
       <div className="space-y-14 sm:space-y-20">
         <ContinueWatchingRail />
+        {/* Personalised; renders nothing without a session or history. */}
+        <RecommendedRail />
         <NowPlayingRail initial={nowPlaying} />
         <TopMoviesRail initial={topMovies} />
         <TopTvRail initial={topTv} />

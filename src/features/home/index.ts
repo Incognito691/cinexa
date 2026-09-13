@@ -8,6 +8,7 @@ export { Hero } from "./components/hero";
 export { BentoGrid } from "./components/bento-grid";
 export { MediaRail } from "./components/media-rail";
 export { SiteFooter } from "./components/site-footer";
+export { RecommendedRail } from "./components/recommended-rail";
 export {
   NowPlayingRail,
   TopMoviesRail,

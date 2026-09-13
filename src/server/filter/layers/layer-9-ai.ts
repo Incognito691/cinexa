@@ -1,6 +1,7 @@
 import type { ContentClass, FilterInput, LayerResult } from "../types";
 import { filterAiCache, AI_CACHE_TTL_MS, type AiCacheEntry } from "../cache";
 import { aiApiKey } from "@/lib/env";
+import { aiUnavailable, callGemini } from "@/server/ai/gemini";
 import { loadAiVerdicts, recordAiVerdicts } from "../ai-store";
 
 /**
@@ -24,10 +25,10 @@ import { loadAiVerdicts, recordAiVerdicts } from "../ai-store";
  * Runs server-side only, so the key is never exposed to the browser.
  */
 
-const AI_MODEL = "gemini-3.6-flash";
-
-const GEMINI_ENDPOINT = (model: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+/**
+ * Most TMDB pages are 20 items; one request covers a page with headroom.
+ */
+const BATCH_LIMIT = 25;
 
 const CONTENT_CLASSES: readonly ContentClass[] = [
   "SAFE",
@@ -36,96 +37,13 @@ const CONTENT_CLASSES: readonly ContentClass[] = [
   "PORNOGRAPHIC",
 ];
 
-/** Most TMDB pages are 20 items; one request covers a page with headroom. */
-const BATCH_LIMIT = 25;
-
 /**
- * Circuit breaker. Without it, a dead key or an out-of-credit account turns
- * every page render into a batch of requests that each burn the full 8s
- * timeout. One failure parks the layer for a minute.
- *
- * ponytail: module-level timestamp, fine for a single process. Move it into
- * the cache module if this ever runs multi-instance and you want shared state.
+ * The client, the circuit breaker and the quota handling now live in
+ * `server/ai/gemini.ts`, shared with the recommendation feature — the free
+ * tier's 20 requests/day is a project-wide budget, so it needs one breaker
+ * rather than one per caller.
  */
-const BREAKER_COOLDOWN_MS = 60_000;
-let breakerOpenUntil = 0;
-
-const aiDisabled = () => !aiApiKey() || Date.now() < breakerOpenUntil;
-
-function tripBreakerFor(ms: number): void {
-  breakerOpenUntil = Math.max(breakerOpenUntil, Date.now() + ms);
-}
-
-/**
- * Gemini returns 429 with a `RetryInfo.retryDelay` ("42s") when the project is
- * over quota. The free tier is a *daily* request cap, so retrying on the
- * default one-minute cooldown just burns the next day's budget on 429s —
- * honour the delay the API asks for instead.
- */
-function cooldownFromError(status: number, body: string): number {
-  if (status !== 429) return BREAKER_COOLDOWN_MS;
-  const seconds = Number(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(body)?.[1]);
-  return Number.isFinite(seconds)
-    ? Math.max(seconds * 1000, BREAKER_COOLDOWN_MS)
-    : BREAKER_COOLDOWN_MS;
-}
-
-/**
- * One Gemini call. Returns the model's text, or null on any failure (tripping
- * the breaker). Gemini counts *thinking* tokens against `maxOutputTokens`, so
- * the budget has to cover reasoning as well as the JSON, or the response comes
- * back truncated and unparseable.
- */
-async function callGemini(
-  systemText: string,
-  userText: string,
-  maxOutputTokens: number,
-  timeoutMs: number,
-): Promise<string | null> {
-  const key = aiApiKey();
-  if (!key) return null;
-
-  try {
-    const res = await fetch(GEMINI_ENDPOINT(AI_MODEL), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": key,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemText }] },
-        contents: [{ role: "user", parts: [{ text: userText }] }],
-        generationConfig: {
-          temperature: 0,
-          responseMimeType: "application/json",
-          maxOutputTokens,
-        },
-      }),
-      signal: AbortSignal.timeout(timeoutMs),
-      // We cache classifications ourselves; don't let the framework cache too.
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      tripBreakerFor(cooldownFromError(res.status, await res.text()));
-      return null;
-    }
-
-    const json = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const parts = json.candidates?.[0]?.content?.parts ?? [];
-    const text = parts
-      .map((p) => p.text ?? "")
-      .join("")
-      .trim();
-    return text || null;
-  } catch {
-    // Network error or timeout — short cooldown, it may well be transient.
-    tripBreakerFor(BREAKER_COOLDOWN_MS);
-    return null;
-  }
-}
+const aiDisabled = aiUnavailable;
 
 const cacheKeyOf = (i: { mediaType: string; tmdbId: number | string }) =>
   `${i.mediaType}:${i.tmdbId}`;
