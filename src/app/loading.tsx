@@ -18,7 +18,7 @@ export default function Loading() {
             {Array.from({ length: 7 }).map((_, i) => (
               <Skeleton
                 key={i}
-                className="aspect-[2/3] w-[150px] shrink-0 rounded-stitch-xl sm:w-[180px]"
+                className="aspect-[2/3] w-[150px] shrink-0 card-shape sm:w-[180px]"
               />
             ))}
           </div>

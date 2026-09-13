@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Play } from "lucide-react";
 
+import { LibraryButton } from "@/features/library";
 import { cn } from "@/lib/utils";
 import type { MoviePage } from "@/types/media";
 
@@ -43,6 +44,20 @@ export function MovieDetailView({ detail, cast, trailer, similar }: MoviePage) {
             {trailer ? (
               <TrailerDialog youtubeKey={trailer.key} title={detail.title} />
             ) : null}
+            <LibraryButton
+              kind="favourite"
+              tmdbId={detail.id}
+              mediaType="movie"
+              title={detail.title}
+              variant="pill"
+            />
+            <LibraryButton
+              kind="collected"
+              tmdbId={detail.id}
+              mediaType="movie"
+              title={detail.title}
+              variant="pill"
+            />
           </>
         }
       />

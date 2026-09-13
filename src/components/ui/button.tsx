@@ -6,106 +6,87 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * The button.
+ *
+ * Every clickable control on the site routes through this — including the
+ * ones that are links, via `asChild`. It previously existed with ten variants
+ * and was imported by three files, while the rest of the app hand-rolled
+ * classes; an audit found **four corner radii, five heights and seven padding
+ * values** across those copies. The variant list below is deliberately short
+ * so there's one obvious answer per situation and no room to drift again.
+ *
+ * Shape rules, applied uniformly:
+ *   - Text buttons are `rounded-xl`. Pills (`rounded-full`) are reserved for
+ *     icon-only buttons, where a circle is the intended shape rather than an
+ *     accident of a different radius token.
+ *   - Three heights, nothing between them: 36 / 40 / 48px.
+ *
+ * Accessibility, per the project's a11y guidance:
+ *   - Renders a native `<button>` (or, with `asChild`, whatever element you
+ *     pass) rather than a `div` with a role, so keyboard and AT behaviour
+ *     comes for free.
+ *   - `:focus-visible` is styled explicitly — a ring offset from the surface,
+ *     shown for keyboard focus but not on mouse click.
+ *   - Use `aria-disabled` instead of `disabled` when the control should stay
+ *     reachable by keyboard so a user can land on it and learn *why* it's
+ *     unavailable; `disabled` drops it from the focus order entirely. Both are
+ *     styled the same.
+ *   - Icon-only buttons have no text, so they need an `aria-label`.
+ */
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap",
-    "rounded-md text-sm font-medium",
-    "transition-all duration-200 ease-out",
-    // Focus ring — visible only for keyboard nav so it doesn't show on mouse click.
+    "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap",
+    "text-sm font-medium",
+    "transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-out",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    // Disabled state.
     "disabled:pointer-events-none disabled:opacity-50",
-    // SVG icons.
-    "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-    // Active (pressed) state — global.
-    "active:scale-[0.98]",
+    "aria-disabled:pointer-events-none aria-disabled:opacity-50",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "active:scale-[0.98] motion-reduce:active:scale-100 motion-reduce:transition-none",
   ].join(" "),
   {
     variants: {
       variant: {
-        // ──────────────── Primary ────────────────
-        default: [
-          "bg-primary text-primary-foreground shadow-sm",
-          "hover:bg-primary/90 hover:shadow-md hover:shadow-primary/20",
-          "active:bg-primary/95",
+        /** The one main action on a view. Red. */
+        primary: [
+          "bg-primary text-primary-foreground shadow-sm shadow-primary/20",
+          "hover:bg-primary/90 hover:shadow-md hover:shadow-primary/30",
         ].join(" "),
 
-        // ──────────────── Brand (purple→pink gradient) ────────────────
-        brand: [
-          "bg-brand-gradient text-white shadow-md shadow-brand-from/25",
-          "hover:opacity-95 hover:shadow-lg hover:shadow-brand-from/35",
-          "active:opacity-90",
-        ].join(" "),
-
-        // ──────────────── Destructive ────────────────
-        destructive: [
-          "bg-destructive text-destructive-foreground shadow-sm",
-          "hover:bg-destructive/90 hover:shadow-md hover:shadow-destructive/20",
-          "active:bg-destructive/95",
-        ].join(" "),
-
-        // ──────────────── Outline ────────────────
-        outline: [
-          "border border-input bg-background shadow-sm",
-          "hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20",
-          "active:bg-accent/80",
-        ].join(" "),
-
-        // ──────────────── Secondary ────────────────
+        /** Everything alongside a primary action. Translucent, bordered. */
         secondary: [
-          "bg-secondary text-secondary-foreground shadow-sm",
-          "hover:bg-secondary/80 hover:shadow-md",
-          "active:bg-secondary/70",
+          "border border-white/[0.1] bg-white/[0.05] text-foreground backdrop-blur-md",
+          "hover:border-white/20 hover:bg-white/[0.1]",
         ].join(" "),
 
-        // ──────────────── Ghost ────────────────
+        /** Low-emphasis: toolbars, icon controls, dismissals. */
         ghost: [
-          "text-foreground/80",
-          "hover:bg-accent hover:text-accent-foreground",
-          "active:bg-accent/80",
+          "text-foreground/70",
+          "hover:bg-white/[0.06] hover:text-foreground",
         ].join(" "),
 
-        // ──────────────── Link ────────────────
-        link: [
-          "text-primary underline-offset-4",
-          "hover:underline",
-          "active:underline",
+        /** Irreversible actions. Restrained until hovered. */
+        destructive: [
+          "border border-rose-500/40 bg-rose-500/15 text-rose-200",
+          "hover:border-rose-500/60 hover:bg-rose-500/25",
         ].join(" "),
 
-        // ──────────────── Glass (translucent, brand-tinted border) ────────────────
-        glass: [
-          "border border-white/[0.08] bg-white/[0.04] text-foreground backdrop-blur-md",
-          "hover:bg-white/[0.08] hover:border-white/[0.15] hover:shadow-md",
-          "active:bg-white/[0.12]",
-        ].join(" "),
-
-        // ──────────────── Pill (Stitch-style rounded-full hero CTA) ────────────────
-        pill: [
-          "rounded-full bg-primary text-white shadow-lg shadow-primary/30",
-          "hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/40",
-          "active:bg-primary/95 active:scale-[0.97]",
-        ].join(" "),
-
-        // ──────────────── Outline-brand ────────────────
-        "outline-brand": [
-          "border border-brand-from/40 bg-brand-from/10 text-foreground backdrop-blur",
-          "hover:bg-brand-from/20 hover:border-brand-from/70",
-          "active:bg-brand-from/25",
-        ].join(" "),
+        /** Inline text link that needs button semantics. */
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-6 text-sm",
-        xl: "h-11 rounded-lg px-6 text-base",
-        "2xl": "h-12 rounded-lg px-7 text-base",
-        icon: "h-9 w-9 p-0",
-        "icon-sm": "h-8 w-8 p-0",
-        "icon-lg": "h-10 w-10 p-0",
+        sm: "h-9 rounded-xl px-3.5 text-xs [&_svg]:size-3.5",
+        default: "h-10 rounded-xl px-4 [&_svg]:size-4",
+        lg: "h-12 rounded-xl px-6 text-base [&_svg]:size-5",
+        // Circles on purpose — see the shape rules above.
+        icon: "h-10 w-10 rounded-full p-0 [&_svg]:size-4",
+        "icon-sm": "h-9 w-9 rounded-full p-0 [&_svg]:size-4",
+        "icon-lg": "h-12 w-12 rounded-full p-0 [&_svg]:size-5",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default",
     },
   },
@@ -114,15 +95,19 @@ const buttonVariants = cva(
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
+  /** Render as the child element (a `<Link>`, say) keeping these styles. */
   asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
         data-slot="button"
+        // Buttons inside a form default to `submit`, which has caught this
+        // codebase before. Explicit unless the caller says otherwise.
+        type={asChild ? undefined : (type ?? "button")}
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}

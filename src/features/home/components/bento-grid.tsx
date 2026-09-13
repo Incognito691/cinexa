@@ -119,9 +119,11 @@ function BentoCard({
     <Link
       href={detailHref}
       className={cn(
-        "group relative block overflow-hidden rounded-stitch-xl border border-white/[0.08]",
+        // Shape, edge and shadow come from `.card-shape` in globals.css so
+        // this tile follows the same corner treatment as every other card.
+        "group card-shape relative block overflow-hidden border border-white/[0.08]",
         "bg-surface-container-low shadow-md shadow-black/30",
-        "transition-all duration-500 hover:-translate-y-1 hover:border-white/[0.18] hover:primary-glow",
+        "transition-all duration-500 hover:-translate-y-1 hover:border-white/[0.18]",
         className,
       )}
     >
@@ -196,7 +198,7 @@ function CardSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-stitch-xl border border-white/[0.06] bg-surface-container-low",
+        "card-shape relative overflow-hidden border border-white/[0.06] bg-surface-container-low",
         className,
       )}
       aria-hidden

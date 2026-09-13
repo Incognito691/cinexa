@@ -26,7 +26,7 @@ export function CardGrid({ items, loading }: CardGridProps) {
     return (
       <div className={cn("grid gap-3 sm:gap-4", GRID_COLS)}>
         {Array.from({ length: 10 }).map((_, idx) => (
-          <Skeleton key={idx} className="aspect-[2/3] rounded-stitch-xl" />
+          <Skeleton key={idx} className="aspect-[2/3] card-shape" />
         ))}
       </div>
     );

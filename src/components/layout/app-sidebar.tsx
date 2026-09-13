@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   ChevronsLeft,
   ChevronsRight,
-  Clapperboard,
   Compass,
   Download,
   Film,
@@ -194,8 +193,13 @@ export function SidebarContent({
             expanded ? "" : "justify-center",
           )}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-gradient shadow-md shadow-brand-from/30 ring-1 ring-white/10">
-            <Clapperboard className="h-4 w-4 text-white" />
+          {/* Solid primary, not the old purple→pink gradient: every other
+              accent in the app is this red, so the mark matches the product
+              instead of a palette nothing else uses. A film strip rather than
+              a play triangle — a triangle on red is YouTube's mark, not ours.
+              Same glyph as the favicon. */}
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/30">
+            <Film className="h-[18px] w-[18px] text-white" />
           </div>
           {expanded ? (
             <span className="font-display text-[17px] font-semibold uppercase tracking-[0.18em] text-foreground">

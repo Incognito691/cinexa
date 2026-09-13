@@ -85,13 +85,19 @@ export function MediaRail({
       ) : null}
 
       {isEmpty && !error ? (
-        <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-3 scrollbar-hide">
+        <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth -mt-3 pb-3 pt-3 scrollbar-hide">
           {Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
             <RailCardSkeleton key={idx} width={cardWidth} />
           ))}
         </div>
       ) : (
-        <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-3 scrollbar-hide">
+        /* `pt-3 -mt-3` is headroom, not spacing. `overflow-x: auto` forces
+           `overflow-y` to `auto` as well — CSS won't let one axis be visible
+           while the other isn't — so a card's `hover:-translate-y-1.5` lift
+           was being sliced flat against the top of the scrollport. The
+           padding gives the lift somewhere to go inside the scroll box; the
+           negative margin cancels it so the layout doesn't move. */
+        <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth -mt-3 pb-3 pt-3 scrollbar-hide">
           {visible.map((item, idx) => (
             <MediaCard
               key={`${item.mediaType}-${item.id}`}
