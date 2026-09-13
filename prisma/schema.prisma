@@ -1,0 +1,174 @@
+// Cinexa database schema.
+//
+// The auth models are the shapes @auth/prisma-adapter expects — renaming or
+// dropping fields here breaks the adapter, so treat them as fixed.
+// Everything below the divider is ours.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Auth.js models ───────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts   Account[]
+  sessions   Session[]
+  watched    WatchedItem[]
+  favourites Favourite[]
+  collected  CollectionItem[]
+  folders    CollectionFolder[]
+
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ───────────────────────────── App models ─────────────────────────────
+
+enum MediaType {
+  movie
+  tv
+}
+
+/// One row per thing the user has watched.
+///
+/// `season`/`episode` are 0 for movies rather than null: Postgres treats NULLs
+/// as distinct in a unique index, so nullable columns would let the same movie
+/// be inserted over and over instead of upserting.
+model WatchedItem {
+  id        String    @id @default(cuid())
+  userId    String
+  tmdbId    Int
+  mediaType MediaType
+  season    Int       @default(0)
+  episode   Int       @default(0)
+
+  /// Playback position and total length, in seconds. Both 0 when the row came
+  /// from a dwell timer or a manual tick rather than a player that reports
+  /// progress — the UI treats 0 runtime as "no progress bar", not as 0%.
+  positionSeconds Int @default(0)
+  runtimeSeconds  Int @default(0)
+
+  watchedAt DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tmdbId, mediaType, season, episode])
+  // Drives "which episodes of this show have I seen" on a detail page.
+  @@index([userId, tmdbId, mediaType])
+  // Drives the Continue Watching rail.
+  @@index([userId, watchedAt])
+}
+
+/// One row per favourited title — the heart on a poster card.
+///
+/// Deliberately not season/episode aware: you favourite a *show*, not an
+/// episode, which is what lets the unique key stay this short.
+model Favourite {
+  id        String    @id @default(cuid())
+  userId    String
+  tmdbId    Int
+  mediaType MediaType
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tmdbId, mediaType])
+  // Drives the /favourites grid, newest first.
+  @@index([userId, createdAt])
+}
+
+/// A user-named folder inside My Collection.
+///
+/// The name is unique per user so a rename can't produce two identical
+/// folders — the UI surfaces the collision instead of silently making a
+/// duplicate that's impossible to tell apart.
+model CollectionFolder {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+
+  createdAt DateTime @default(now())
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CollectionItem[]
+
+  @@unique([userId, name])
+  @@index([userId, createdAt])
+}
+
+/// One row per title added to the collection.
+///
+/// `folderId` is null when the item is unfiled, which is where everything
+/// lands on "Add to collection" — folders are an organising layer *over* the
+/// collection, not a precondition for joining it. Removing an item from a
+/// folder therefore sets this back to null rather than deleting the row, and
+/// deleting a folder un-files its items (`SetNull`) instead of destroying
+/// titles the user never asked to lose.
+model CollectionItem {
+  id        String    @id @default(cuid())
+  userId    String
+  tmdbId    Int
+  mediaType MediaType
+  folderId  String?
+
+  createdAt DateTime @default(now())
+
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder CollectionFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, tmdbId, mediaType])
+  // Drives the /my-collection grid, newest first.
+  @@index([userId, createdAt])
+  // Drives "what's in this folder".
+  @@index([folderId])
+}

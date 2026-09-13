@@ -28,14 +28,39 @@ export interface PlaybackSource {
   label: string;
   /** Shown under the picker so the choice isn't opaque. */
   hint: string;
-  build: (target: PlaybackTarget) => string;
+  /**
+   * Origin this provider posts player events from, when it posts any. Only
+   * messages from one of these are trusted — see `watch-tracker.tsx`.
+   */
+  progressOrigin?: string;
+  /** `startAt` seconds, when the provider supports resuming mid-stream. */
+  build: (target: PlaybackTarget, startAt?: number) => string;
 }
 
 export const SOURCES: readonly PlaybackSource[] = [
   {
-    id: "superembed",
+    id: "vidlink",
     label: "Primary",
-    hint: "SuperEmbed — pick a server from its own menu once the player loads.",
+    hint: "VidLink — reports playback position, so this one resumes where you left off.",
+    progressOrigin: "https://vidlink.pro",
+    build: ({ tmdbId, mediaType, season, episode }, startAt) => {
+      const path =
+        mediaType === "movie"
+          ? `movie/${tmdbId}`
+          : `tv/${tmdbId}/${season ?? 1}/${episode ?? 1}`;
+
+      const params = new URLSearchParams({ nextbutton: "true" });
+      // Only send a real mid-stream position: `startAt=0` is meaningless and
+      // the provider's own saved progress does a better job from the start.
+      if (startAt && startAt > 0) params.set("startAt", String(Math.floor(startAt)));
+
+      return `https://vidlink.pro/${path}?${params}`;
+    },
+  },
+  {
+    id: "superembed",
+    label: "SuperEmbed",
+    hint: "SuperEmbed — pick a server from its own menu once the player loads. Reports nothing, so progress isn't tracked here.",
     build: ({ tmdbId, mediaType, season, episode }) => {
       // The player lives at the bare path. `directstream.php` is NOT an
       // endpoint — it returns 404 "File not found." for every id.
@@ -52,8 +77,8 @@ export const SOURCES: readonly PlaybackSource[] = [
   },
   {
     id: "vidsrc",
-    label: "Backup",
-    hint: "A different provider — use this when the primary won't start.",
+    label: "VidSrc",
+    hint: "A third provider — use this when the others won't start. No progress tracking.",
     build: ({ tmdbId, mediaType, season, episode }) =>
       mediaType === "movie"
         ? `https://vidsrc.to/embed/movie/${tmdbId}`
@@ -66,3 +91,13 @@ export const DEFAULT_SOURCE_ID = SOURCES[0].id;
 export function getSource(id: string): PlaybackSource {
   return SOURCES.find((s) => s.id === id) ?? SOURCES[0];
 }
+
+/**
+ * Where the user's preferred default provider is stored.
+ *
+ * Shared between the settings page (which writes it) and the player (which
+ * starts on it), so the two can't drift onto different keys.
+ */
+export const SOURCE_PREFERENCE_KEY = "cinexa:default-source";
+
+export const SOURCE_IDS: readonly string[] = SOURCES.map((s) => s.id);

@@ -13,13 +13,37 @@ const envSchema = z.object({
    */
   GEMINI_API_KEY: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
+
+  /**
+   * Postgres (Neon). Optional at parse time like everything else so the app
+   * still boots without it — the pages that need a session reach it through
+   * `requireServerEnv`, which throws at request time instead.
+   *
+   * Note: strip `channel_binding=require` from Neon's default URL. Prisma's
+   * engine doesn't implement SCRAM channel binding and fails with a misleading
+   * "Can't reach database server". `sslmode=require` still applies.
+   */
+  DATABASE_URL: z.string().min(1).optional(),
+
+  /** Auth.js v5 reads AUTH_SECRET, but accepts NEXTAUTH_SECRET as a fallback. */
+  NEXTAUTH_SECRET: z.string().min(1).optional(),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
 });
 
 export const env = envSchema.parse({
   TMDB_API_KEY: process.env.TMDB_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  DATABASE_URL: process.env.DATABASE_URL,
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 });
+
+/** True when Google OAuth is configured; the UI hides sign-in without it. */
+export const authConfigured = (): boolean =>
+  Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.DATABASE_URL);
 
 /** The key the AI filter layer runs on. */
 export const aiApiKey = (): string | undefined =>
