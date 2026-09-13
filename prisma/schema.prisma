@@ -28,6 +28,7 @@ model User {
   favourites Favourite[]
   collected  CollectionItem[]
   folders    CollectionFolder[]
+  suggestion AiSuggestion?
 
   createdAt DateTime @default(now())
 }
@@ -171,4 +172,24 @@ model CollectionItem {
   @@index([userId, createdAt])
   // Drives "what's in this folder".
   @@index([folderId])
+}
+
+/// One day's AI suggestions per user.
+///
+/// In Postgres rather than on disk because the deploy target is serverless:
+/// the filesystem is read-only, so the JSON store this replaced could never
+/// write, meaning every render missed the cache and spent one of the 20
+/// daily Gemini requests. Twenty page views would exhaust the budget.
+///
+/// Keyed by user with the day stamped alongside, so a stale row is a cache
+/// miss rather than something needing a sweep.
+model AiSuggestion {
+  userId String   @id
+  /// `YYYY-MM-DD` (UTC) — the day the request was spent.
+  day    String
+  titles String[]
+
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
