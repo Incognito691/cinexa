@@ -47,12 +47,22 @@ export function ExploreView(_: ExploreViewProps) {
       sortBy: searchParams.get("sort_by") ?? undefined,
       q: searchParams.get("q") ?? undefined,
       country: searchParams.get("country") ?? undefined,
+      category: searchParams.get("category") ?? undefined,
+      language: searchParams.get("language") ?? undefined,
       page: Number(searchParams.get("page") ?? "1"),
     };
   }, [searchParams]);
 
+  // `category` and `language` count as filters. They didn't, which is why
+  // every "View All" on the home page — all of which link with `?tab=…&
+  // category=…` — landed on this landing view instead of on results.
   const hasActiveFilters = Boolean(
-    (filters.genre != null) || filters.sortBy || filters.q || filters.country,
+    filters.genre != null ||
+      filters.sortBy ||
+      filters.q ||
+      filters.country ||
+      filters.category ||
+      filters.language,
   );
 
   if (!hasActiveFilters) {
@@ -93,6 +103,8 @@ interface ResultsFilters {
   sortBy?: string;
   q?: string;
   country?: string;
+  category?: string;
+  language?: string;
   page: number;
 }
 
@@ -107,6 +119,8 @@ function ExploreResults({ filters }: { filters: ResultsFilters }) {
       filters.sortBy ?? null,
       filters.q ?? null,
       filters.country ?? null,
+      filters.category ?? null,
+      filters.language ?? null,
       filters.page,
     ],
     queryFn: () => getExploreFilters(filters),
@@ -125,6 +139,10 @@ function ExploreResults({ filters }: { filters: ResultsFilters }) {
     if (filters.sortBy) params.set("sort_by", filters.sortBy);
     if (filters.q) params.set("q", filters.q);
     if (filters.country) params.set("country", filters.country);
+    // Carried through pagination — dropping them here would silently reset
+    // page 2 of "Now Playing" back to popular.
+    if (filters.category) params.set("category", filters.category);
+    if (filters.language) params.set("language", filters.language);
     if (nextPage > 1) params.set("page", String(nextPage));
     const qs = params.toString();
     return qs ? `/explore?${qs}` : "/explore";

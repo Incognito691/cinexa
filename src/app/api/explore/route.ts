@@ -4,6 +4,7 @@ import { fail, ok } from "@/server/http/response";
 import {
   fetchDiscover,
   fetchSearch,
+  sortByForCategory,
   type TmdbListResult,
 } from "@/server/tmdb";
 import { fetchTrending } from "@/server/tmdb";
@@ -17,6 +18,17 @@ const exploreQuerySchema = z.object({
   q: z.string().trim().min(1).optional(),
   /** ISO 3166-1 alpha-2 country of origin, e.g. "KR". */
   country: z.string().trim().length(2).toUpperCase().optional(),
+  /**
+   * Which slice of the catalogue. The home page's "View All" links and the
+   * explore presets have always emitted this; the route used to ignore it and
+   * hardcode `popular`, so every one of those links landed on the same
+   * popular-movies list regardless of the rail it came from.
+   */
+  category: z
+    .enum(["popular", "top_rated", "now_playing", "on_the_air"])
+    .optional(),
+  /** `with_original_language`, e.g. "hi" for the Hindi rails. */
+  language: z.string().trim().min(2).max(5).optional(),
 });
 
 /**
@@ -41,10 +53,13 @@ export async function GET(request: Request) {
       sortBy: searchParams.get("sort_by") ?? undefined,
       q: searchParams.get("q") ?? undefined,
       country: searchParams.get("country") ?? undefined,
+      category: searchParams.get("category") ?? undefined,
+      language: searchParams.get("language") ?? undefined,
     });
     if (!parsed.success) return fail("Invalid explore query", 422);
 
-    const { tab, page, genre, sortBy, q, country } = parsed.data;
+    const { tab, page, genre, sortBy, q, country, category, language } =
+      parsed.data;
 
     let data: TmdbListResult;
 
@@ -57,17 +72,22 @@ export async function GET(request: Request) {
       data = await fetchSearch({ type: searchType, q, page });
     } else {
       const tabConfig = TAB_CONFIG[tab];
+      const resolvedCategory = category ?? "popular";
       data = await fetchDiscover({
         type: tabConfig.type,
-        category: "popular",
+        category: resolvedCategory,
         page,
         withGenres: [
           ...tabConfig.genres,
           ...(genre != null ? [String(genre)] : []),
         ].join(",") || undefined,
         originCountry: country,
-        language: tabConfig.defaultLanguage,
-        sortBy,
+        // The tab's own language wins — `anime` means Japanese whatever the
+        // URL says — otherwise honour the caller's.
+        language: tabConfig.defaultLanguage ?? language,
+        // An explicit sort still overrides, so a category and a sort chip can
+        // coexist; without one, the category picks its natural order.
+        sortBy: sortBy ?? sortByForCategory(resolvedCategory),
         forceDiscover: true,
       });
     }

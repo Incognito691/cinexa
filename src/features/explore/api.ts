@@ -14,6 +14,10 @@ export interface ExploreFilters {
   q?: string;
   /** ISO 3166-1 alpha-2 country of origin, e.g. "KR". */
   country?: string;
+  /** Catalogue slice: popular / top_rated / now_playing / on_the_air. */
+  category?: string;
+  /** `with_original_language`, e.g. "hi". */
+  language?: string;
   page: number;
 }
 
@@ -37,6 +41,8 @@ export function getExploreFilters(
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
   if (filters.q) params.set("q", filters.q);
   if (filters.country) params.set("country", filters.country);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.language) params.set("language", filters.language);
   return request<ListPayload>(`/api/explore?${params.toString()}`);
 }
 
