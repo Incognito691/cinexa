@@ -12,7 +12,7 @@ export function RailCardSkeleton({ width }: { width: number }) {
   return (
     <div
       className={cn(
-        "relative shrink-0 snap-start overflow-hidden rounded-stitch-xl border border-white/[0.06]",
+        "card-shape relative shrink-0 snap-start overflow-hidden border border-white/[0.06]",
         "bg-surface-container-low aspect-[2/3]",
       )}
       style={{ width: `${width}px` }}

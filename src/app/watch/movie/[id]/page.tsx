@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { WatchView } from "@/features/watch";
 import { buildMetadata } from "@/lib/metadata";
 import { fetchMoviePage } from "@/server/tmdb";
+import { getResumePosition, isSignedIn } from "@/server/watch-history";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -30,6 +31,11 @@ export default async function Page({ params }: PageProps) {
 
   const { detail, similar } = page;
   const year = detail.releaseDate?.slice(0, 4);
+  // Both no-op when signed out — login is optional.
+  const [signedIn, startAt] = await Promise.all([
+    isSignedIn(),
+    getResumePosition({ tmdbId: detail.id, mediaType: "movie" }),
+  ]);
 
   return (
     <WatchView
@@ -38,8 +44,11 @@ export default async function Page({ params }: PageProps) {
       subtitle={[year, detail.genres.slice(0, 3).join(", ")]
         .filter(Boolean)
         .join(" · ")}
+      overview={detail.overview}
       detailHref={`/movie/${detail.id}`}
       similar={similar}
+      signedIn={signedIn}
+      startAt={startAt}
     />
   );
 }

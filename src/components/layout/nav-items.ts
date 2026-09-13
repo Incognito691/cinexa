@@ -37,12 +37,15 @@ export const settingsNav: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
+// Auth.js's own sign-out route: a plain link to it renders the built-in
+// confirm page, which owns the CSRF token. That's a link instead of a form,
+// and it's now the app's only sign-out since the topbar dropped its button.
 export const logoutNav: NavItem[] = [
   {
     label: "Logout",
     icon: LogOut,
+    href: "/api/auth/signout",
     external: true,
-    comingSoon: true,
   },
 ];
 

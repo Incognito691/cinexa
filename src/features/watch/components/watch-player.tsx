@@ -3,21 +3,25 @@
 import { AlertTriangle, Maximize, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { usePersistedString } from "@/hooks/use-persisted-string";
 import { cn } from "@/lib/utils";
 
 import {
   DEFAULT_SOURCE_ID,
   SOURCES,
+  SOURCE_IDS,
+  SOURCE_PREFERENCE_KEY,
   getSource,
   type PlaybackTarget,
 } from "../lib/sources";
 
 /** How long the iframe gets to load before we offer the backup source. */
 const LOAD_TIMEOUT_MS = 12_000;
-
 interface WatchPlayerProps {
   target: PlaybackTarget;
   title: string;
+  /** Seconds to resume at. Only providers that support it act on this. */
+  startAt?: number;
   children?: React.ReactNode;
 }
 
@@ -34,8 +38,25 @@ interface WatchPlayerProps {
  * cross-origin — we can neither read nor drive it. Switching provider is the
  * only server control this app has.
  */
-export function WatchPlayer({ target, title, children }: WatchPlayerProps) {
-  const [sourceId, setSourceId] = useState(DEFAULT_SOURCE_ID);
+export function WatchPlayer({
+  target,
+  title,
+  startAt,
+  children,
+}: WatchPlayerProps) {
+  // The settings page owns the default. The player follows it — including
+  // across the hook's post-mount hydration — until the user picks a source
+  // here, after which their pick wins for this page only. Switching provider
+  // to get one broken title playing shouldn't silently rewrite the default.
+  const [preferred] = usePersistedString(
+    SOURCE_PREFERENCE_KEY,
+    DEFAULT_SOURCE_ID,
+    SOURCE_IDS,
+  );
+  const [picked, setPicked] = useState<string | null>(null);
+  const sourceId = picked ?? preferred;
+  const setSourceId = setPicked;
+
   const [loaded, setLoaded] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
 
@@ -43,7 +64,7 @@ export function WatchPlayer({ target, title, children }: WatchPlayerProps) {
   const shellRef = useRef<HTMLDivElement>(null);
 
   const source = getSource(sourceId);
-  const src = source.build(target);
+  const src = source.build(target, startAt);
 
   // Reset load state whenever the stream changes — a new episode or source is
   // a fresh load, and the old "ready" state would hide the spinner wrongly.
@@ -72,7 +93,12 @@ export function WatchPlayer({ target, title, children }: WatchPlayerProps) {
     <div>
       <div
         ref={shellRef}
-        className="relative mx-auto aspect-video w-full max-w-[1400px] overflow-hidden rounded-2xl border border-white/[0.08] bg-black"
+        // Sized so the player, the source row and the episode bar together
+        // fill exactly one screen, leaving the title and description below the
+        // fold. Width is derived from leftover viewport *height* so the frame
+        // stays exactly 16:9 — setting a max-height instead would letterbox it.
+        // `WATCH_CHROME_PX` is everything else in that stack; keep them in sync.
+        className="relative mx-auto aspect-video w-full max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] overflow-hidden rounded-2xl border border-white/[0.08] bg-black"
       >
         <iframe
           ref={frameRef}
@@ -111,7 +137,7 @@ export function WatchPlayer({ target, title, children }: WatchPlayerProps) {
 
       {/* Controls sit outside the fullscreen wrapper so they never overlay
           the picture. */}
-      <div className="mx-auto mt-3 flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-1">
+      <div className="mx-auto mt-3 flex max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] flex-wrap items-center justify-between gap-3 px-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
             Source
@@ -154,7 +180,7 @@ export function WatchPlayer({ target, title, children }: WatchPlayerProps) {
         </div>
       </div>
 
-      <p className="mx-auto mt-2 max-w-[1400px] px-1 text-[11px] text-white/35">
+      <p className="mx-auto mt-2 max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] px-1 text-[11px] text-white/35">
         {source.hint}
       </p>
 

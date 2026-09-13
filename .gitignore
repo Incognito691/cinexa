@@ -38,3 +38,7 @@ next-env.d.ts
 
 # prisma
 /prisma/migrations/dev.db*
+# Per-user AI suggestion cache — keyed by user id, so it's personal data and
+# machine-local. Unlike data/ai-verdicts.json (a shared, reviewable blocklist
+# that is deliberately committed), this must not ship.
+data/ai-recommendations.json

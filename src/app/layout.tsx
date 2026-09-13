@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { UserMenu } from "@/features/auth/components/user-menu";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -77,7 +78,7 @@ export default function RootLayout({
         >
           <QueryProvider>
             <TooltipProvider delayDuration={150}>
-              <AppShell>{children}</AppShell>
+              <AppShell userMenu={<UserMenu />}>{children}</AppShell>
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>

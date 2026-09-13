@@ -21,6 +21,7 @@ export {
 export { fetchDiscover, type FetchDiscoverParams } from "./discover";
 export { fetchTrending, type FetchTrendingParams } from "./trending";
 export { fetchSearch, type FetchSearchParams } from "./search";
+export { fetchRelated } from "./related";
 export {
   fetchMovieVideos,
   fetchMovieCast,

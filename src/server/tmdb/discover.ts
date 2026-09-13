@@ -4,6 +4,7 @@ import type { TmdbPaginatedResult } from "@/types/media";
 import { REVALIDATE_DYNAMIC, REVALIDATE_LIST, tmdbFetch } from "./client";
 import { mapTmdbListItem, type TmdbListItemRaw } from "./mapper";
 import {
+  discoverConstraints,
   sortByForCategory,
   yearParamFor,
   type DiscoverCategory,
@@ -62,6 +63,9 @@ export async function fetchDiscover(
       with_original_language: params.language,
       with_genres: params.withGenres,
       with_origin_country: params.originCountry,
+      // Only on `/discover`. The `/movie/{category}` endpoints already mean
+      // what they say, and TMDB rejects some of these params there.
+      ...(useDiscover ? discoverConstraints(params.category, params.type) : {}),
       ...(params.year != null ? { [yearParamFor(params.type)]: params.year } : {}),
     },
     // Filtered rails cache shorter so a pipeline fix surfaces sooner.

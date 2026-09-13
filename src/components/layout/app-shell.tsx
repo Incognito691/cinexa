@@ -16,9 +16,11 @@ const COLLAPSED_W = "68px";
 
 interface AppShellProps {
   children: React.ReactNode;
+  /** Server-rendered auth control; passed as a slot so the shell stays client-side. */
+  userMenu?: React.ReactNode;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, userMenu }: AppShellProps) {
   const [expanded, setExpanded] = usePersistedFlag(SIDEBAR_KEY, true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -72,7 +74,7 @@ export function AppShell({ children }: AppShellProps) {
         )}
         style={{ "--sidebar-w": sidebarWidth } as React.CSSProperties}
       >
-        <AppTopbar onMenuClick={() => setMobileOpen(true)} />
+        <AppTopbar onMenuClick={() => setMobileOpen(true)} userMenu={userMenu} />
         <main className="flex-1 px-1 pb-16 pt-4 sm:px-3 lg:px-4">
           <PageTransition>{children}</PageTransition>
         </main>

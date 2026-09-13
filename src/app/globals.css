@@ -93,6 +93,101 @@
     100% { background-position: -200% 0; }
   }
 
+  /* ── Card shape ──────────────────────────────────────────────────────
+     Rounded corners everywhere, softened into squircles where the browser
+     supports it. No clip-path: an earlier chamfered variant needed one,
+     and clip-path destroys `border` and `box-shadow` on everything it
+     touches, which is why the cards below still carry a two-layer frame —
+     that layer now earns its keep by painting a *gradient* edge, which a
+     plain 1px border can't do.
+  */
+  :root {
+    --card-radius: 24px; /* matches rounded-stitch-xl */
+  }
+
+  /* Shape only — skeletons and other unbordered blocks. */
+  .card-shape {
+    border-radius: var(--card-radius);
+  }
+
+  /* Bordered card. Outer layer: the 1px edge and the shadow.
+
+     The edge is a gradient, not a flat colour — lit from the top like a real
+     bevel, which is what keeps the card reading as a raised surface rather
+     than a sticker. Timing matches the original card easing (500ms, the same
+     cubic-bezier) so the lift still feels unhurried. */
+  .card-frame {
+    padding: 1px;
+    border-radius: var(--card-radius);
+    background: linear-gradient(
+      160deg,
+      hsl(0 0% 100% / 0.16) 0%,
+      hsl(0 0% 100% / 0.07) 38%,
+      hsl(0 0% 100% / 0.05) 100%
+    );
+    filter: drop-shadow(0 4px 10px hsl(0 0% 0% / 0.32));
+    transition:
+      background 500ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 500ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Replaces `hover:primary-glow`. Cast as a filter rather than a box-shadow
+     so it layers with the neutral shadow — the glow blooms on top of the
+     depth instead of replacing it. */
+  .card-frame:hover {
+    background: linear-gradient(
+      160deg,
+      hsl(0 0% 100% / 0.3) 0%,
+      hsl(0 0% 100% / 0.14) 38%,
+      rgb(229 9 20 / 0.35) 100%
+    );
+    filter: drop-shadow(0 6px 14px hsl(0 0% 0% / 0.4))
+      drop-shadow(0 8px 26px rgb(229 9 20 / 0.32));
+  }
+
+  /* The card's real surface, inset by the width of the edge above. */
+  .card-face {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    border-radius: calc(var(--card-radius) - 1px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-frame {
+      transition: none;
+    }
+  }
+
+  /* ── Corner smoothing, applied to the entire interface ───────────────
+     Cards, sidebar, topbar, panels, dialogs, inputs, buttons, chips,
+     settings rows, bento tiles — roughly thirty files' worth of
+     `rounded-*`, softened without touching any of them.
+
+     A plain `border-radius` is a circular arc: the curve has one constant
+     curvature, the straight edge has none, and they meet at a visible
+     kink. `squircle` is `superellipse(2)`, which ramps the curvature
+     continuously into the edge so there's no seam. Same corner size,
+     softer read — the shape iOS uses.
+
+     Tuning knob: `superellipse(3)` is rounder than squircle,
+     `superellipse(1.5)` sits between squircle and a plain radius.
+
+     corner-shape is Chrome/Edge 139+ and not Baseline, so Safari and
+     Firefox keep ordinary circular rounding. That's the right way round —
+     the fallback is the design as it already was, not a broken one.
+
+     `rounded-full` is excluded. At a 50% radius a squircle is a rounded
+     square rather than a circle, so avatars, play buttons and progress
+     bars would visibly stop being round. */
+  @supports (corner-shape: squircle) {
+    *:not(.rounded-full) {
+      corner-shape: squircle;
+    }
+  }
+
   /* Glass morphism utilities — tuned so the purple/pink gradient bleeds through */
   .glass {
     background: hsl(0 0% 100% / 0.04);

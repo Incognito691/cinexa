@@ -163,33 +163,23 @@ export function Hero({ className, initialTrending = [] }: HeroProps) {
 
           {/* CTA row */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button
-              asChild
-              variant="pill"
-              size="2xl"
-              className="h-12 px-7 text-sm font-semibold"
-            >
+            {/* No className overrides on any of these any more. Each one used
+                to re-specify its own height, radius and padding on top of the
+                variant, which is how the app ended up with four button
+                shapes. */}
+            <Button asChild size="lg">
               <Link href={watchHref}>
                 <Play className="fill-current" />
                 Watch Now
               </Link>
             </Button>
 
-            <Button
-              variant="glass"
-              size="2xl"
-              className="h-12 rounded-full px-6 text-sm font-semibold text-white"
-            >
+            <Button variant="secondary" size="lg">
               <Plus />
               Add to Watchlist
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              aria-label="Like"
-              className="h-12 w-12 rounded-full border border-white/15 bg-white/10 backdrop-blur-md hover:bg-white/20"
-            >
+            <Button variant="secondary" size="icon-lg" aria-label="Like">
               <Heart />
             </Button>
           </div>

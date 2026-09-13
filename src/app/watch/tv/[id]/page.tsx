@@ -1,8 +1,13 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { WatchView } from "@/features/watch";
 import { buildMetadata } from "@/lib/metadata";
 import { fetchTvPage } from "@/server/tmdb";
+import {
+  getResumePosition,
+  getWatchedEpisodes,
+  isSignedIn,
+} from "@/server/watch-history";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,9 +39,39 @@ export default async function Page({ params, searchParams }: PageProps) {
   const page = await fetchTvPage(id, season);
   if (!page) notFound();
 
-  const { detail, episodes, selectedSeason, similar } = page;
+  const { detail, episodes, selectedSeason, seasons, similar } = page;
   const episode = num(query.episode) ?? episodes[0]?.episodeNumber ?? 1;
   const current = episodes.find((e) => e.episodeNumber === episode);
+
+  // The requested episode isn't in this season. That's what a "next episode"
+  // link looks like at a season boundary — roll into the next season if there
+  // is one, otherwise clamp, rather than embedding a player for an episode
+  // that doesn't exist.
+  if (!current && episodes.length > 0) {
+    const past = episode > episodes[episodes.length - 1].episodeNumber;
+    const nextSeason = seasons.find((s) => s.seasonNumber > selectedSeason);
+    if (past && nextSeason) {
+      redirect(
+        `/watch/tv/${detail.id}?season=${nextSeason.seasonNumber}&episode=1`,
+      );
+    }
+    const fallback = past
+      ? episodes[episodes.length - 1].episodeNumber
+      : episodes[0].episodeNumber;
+    redirect(`/watch/tv/${detail.id}?season=${selectedSeason}&episode=${fallback}`);
+  }
+
+  // All no-op to empty/false/undefined when signed out — login is optional.
+  const [watchedKeys, signedIn, startAt] = await Promise.all([
+    getWatchedEpisodes(detail.id),
+    isSignedIn(),
+    getResumePosition({
+      tmdbId: detail.id,
+      mediaType: "tv",
+      season: selectedSeason,
+      episode,
+    }),
+  ]);
 
   return (
     <WatchView
@@ -57,6 +92,10 @@ export default async function Page({ params, searchParams }: PageProps) {
       similar={similar}
       episodes={episodes}
       currentEpisode={episode}
+      seasons={seasons}
+      watchedKeys={watchedKeys}
+      signedIn={signedIn}
+      startAt={startAt}
     />
   );
 }
