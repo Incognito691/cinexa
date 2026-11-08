@@ -1,8 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, LogIn, Play } from "lucide-react";
+import { ChevronRight, Compass, LogIn, PlayCircle } from "lucide-react";
 
 import { signIn } from "@/auth";
-import { authConfigured } from "@/lib/env";
+import { Button } from "@/components/ui/button";
+import { authConfigured, tmdbImage } from "@/lib/env";
+import { fetchTrending } from "@/server/tmdb";
 import { isSignedIn } from "@/server/watch-history";
 
 import { loadContinueCards } from "../lib/entries";
@@ -30,20 +33,19 @@ export async function ContinueWatchingRail() {
     if (!authConfigured()) return null;
     return (
       <Shell>
-        <Prompt text="Sign in and everything you play shows up here.">
+        <Prompt
+          title="Never lose your place"
+          text="Sign in and every movie and episode you start is saved at the exact second you stopped, on any device."
+        >
           <form
             action={async () => {
               "use server";
               await signIn("google", { redirectTo: "/" });
             }}
           >
-            <button
-              type="submit"
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-            >
-              <LogIn className="h-4 w-4" aria-hidden />
-              Sign in
-            </button>
+            <Button type="submit">
+              <LogIn aria-hidden /> Sign in to start
+            </Button>
           </form>
         </Prompt>
       </Shell>
@@ -56,14 +58,15 @@ export async function ContinueWatchingRail() {
   if (cards.length === 0) {
     return (
       <Shell>
-        <Prompt text="Nothing watched yet — press play on something and it lands here.">
-          <Link
-            href="/explore"
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            <Play className="h-4 w-4 fill-current" aria-hidden />
-            Browse titles
-          </Link>
+        <Prompt
+          title="Nothing in progress yet"
+          text="Press play on anything and it lands here with your progress."
+        >
+          <Button asChild>
+            <Link href="/explore">
+              <Compass aria-hidden /> Browse titles
+            </Link>
+          </Button>
         </Prompt>
       </Shell>
     );
@@ -115,17 +118,78 @@ function Shell({
   );
 }
 
-function Prompt({
+/** Made-up progress for the preview cards. */
+const SAMPLE_PROGRESS = [68, 32, 85];
+
+/**
+ * The empty rail: a pitch on the left, and on the right three sample cards
+ * (this week's trending backdrops with progress bars) previewing what the
+ * rail turns into. Trending is already content-filtered and cached, and the
+ * home page fetches it anyway.
+ */
+async function Prompt({
+  title,
   text,
   children,
 }: {
+  title: string;
   text: string;
   children: React.ReactNode;
 }) {
+  const samples = await fetchTrending({ type: "movie" }).then(
+    (r) => r.items.filter((i) => i.backdropPath).slice(0, SAMPLE_PROGRESS.length),
+    () => [],
+  );
+
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-stitch-xl border border-white/[0.08] bg-white/[0.03] p-6">
-      <p className="text-sm text-white/60">{text}</p>
-      {children}
+    <div
+      className="grid items-center gap-8 overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#0b0b0b] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto]"
+      style={{
+        backgroundImage:
+          "radial-gradient(circle at 100% 0%, rgb(229 9 20 / 0.14), transparent 45%), radial-gradient(circle at 0% 100%, hsl(var(--brand-from) / 0.12), transparent 40%)",
+      }}
+    >
+      <div className="flex items-start gap-4">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-gradient shadow-lg shadow-fuchsia-500/25">
+          <PlayCircle className="h-6 w-6 text-white" aria-hidden />
+        </span>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-semibold text-white sm:text-xl">{title}</h3>
+            <p className="max-w-md text-sm leading-relaxed text-white/60">{text}</p>
+          </div>
+          {children}
+        </div>
+      </div>
+
+      {samples.length === SAMPLE_PROGRESS.length ? (
+        <div aria-hidden className="hidden gap-4 lg:flex">
+          {samples.map((item, i) => (
+            <div
+              key={item.id}
+              className="relative h-28 w-48 overflow-hidden rounded-xl border border-white/10 opacity-70 xl:w-52"
+            >
+              <Image
+                src={tmdbImage(item.backdropPath, "w300")!}
+                alt=""
+                fill
+                sizes="208px"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+              <p className="absolute inset-x-3 bottom-5 truncate text-xs font-medium text-white/90">
+                {item.title}
+              </p>
+              <div className="absolute inset-x-3 bottom-2.5 h-1 overflow-hidden rounded-full bg-white/20">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${SAMPLE_PROGRESS[i]}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

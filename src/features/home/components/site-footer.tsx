@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Facebook, Film, Instagram, Twitter, Youtube } from "lucide-react";
+import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+
+import { LogoMark, Wordmark } from "@/components/brand/logo";
 
 const footerColumns = [
   {
@@ -53,12 +55,8 @@ export function SiteFooter() {
         {/* Brand + tagline */}
         <div className="space-y-4">
           <Link href="/" className="inline-flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gradient shadow-md shadow-brand-from/30 ring-1 ring-white/10">
-              <Film className="h-4 w-4 text-white" />
-            </span>
-            <span className="text-lg font-semibold tracking-tight text-white">
-              Cinexa
-            </span>
+            <LogoMark className="h-9 w-9" />
+            <Wordmark className="text-xl" />
           </Link>
           <p className="max-w-xs text-sm leading-relaxed text-white/55">
             Premium movies and TV, hand-picked every week. Built for the love
@@ -105,12 +103,6 @@ export function SiteFooter() {
 
       <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-white/[0.06] pt-6 text-xs text-white/45 sm:flex-row sm:items-center">
         <p>© {new Date().getFullYear()} Cinexa. All rights reserved.</p>
-        <p className="text-white/40">
-          Powered by{" "}
-          <span className="bg-brand-gradient bg-clip-text text-transparent">
-            TMDB
-          </span>
-        </p>
       </div>
     </footer>
   );

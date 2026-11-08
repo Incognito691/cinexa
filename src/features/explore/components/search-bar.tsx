@@ -136,12 +136,12 @@ export function SearchBar({
       }}
     >
       <div className="relative">
-        <Search
-          className={cn(
-            "pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground",
-            isHero ? "left-5" : "left-4",
-          )}
-        />
+        {/* The hero has a search button on the right; one icon is enough. */}
+        {isHero ? null : (
+          // z-10: the input is later in the DOM and has a backdrop blur, so
+          // without it the icon is painted under the blur as a smudge.
+          <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        )}
         <input
           type="search"
           value={value}
@@ -164,7 +164,7 @@ export function SearchBar({
           className={cn(
             "w-full border border-white/[0.08] bg-white/[0.04] text-sm text-foreground backdrop-blur-md placeholder:text-muted-foreground/70 outline-none transition focus:border-brand-from/60 focus:bg-white/[0.08] focus:ring-2 focus:ring-brand-from/30",
             isHero
-              ? "h-12 rounded-full pl-12 pr-14"
+              ? "h-12 rounded-full pl-6 pr-14"
               : "h-10 rounded-xl pl-11 pr-4",
           )}
         />

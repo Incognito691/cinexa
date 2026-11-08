@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { Compass } from "lucide-react";
+import { Heart } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { LibraryEmptyState } from "@/components/library-empty-state";
 import { MediaCard } from "@/components/media/media-card";
 import { loadSavedCards } from "@/features/library/lib/entries";
 import { buildMetadata } from "@/lib/metadata";
@@ -47,26 +46,19 @@ export default async function FavouritesPage() {
           ))}
         </div>
       ) : (
-        <EmptyState signedIn={signedIn} />
+        <LibraryEmptyState
+          icon={Heart}
+          signedIn={signedIn}
+          path="/favourites"
+          title={signedIn ? "No favourites yet" : "Keep the ones you love"}
+          body={
+            signedIn
+              ? "Tap the heart on any poster and it lands here."
+              : "Sign in to heart any movie or show and find it here on every device."
+          }
+        />
       )}
     </div>
   );
 }
 
-function EmptyState({ signedIn }: { signedIn: boolean }) {
-  return (
-    <div className="flex flex-wrap items-center gap-4 rounded-stitch-xl border border-white/[0.08] bg-white/[0.03] p-6">
-      <p className="text-sm text-white/60">
-        {signedIn
-          ? "Nothing hearted yet. Tap the heart on any poster and it lands here."
-          : "Your favourites live with your account."}
-      </p>
-      <Button asChild>
-        <Link href="/explore">
-          <Compass aria-hidden />
-          Browse titles
-        </Link>
-      </Button>
-    </div>
-  );
-}

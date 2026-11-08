@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { X } from "lucide-react";
 
+import { tmdbImage } from "@/lib/env";
+
 import { getExploreFilters } from "../api";
 import type { ExploreTab } from "../schemas";
 import { buildExploreHref } from "../lib/presets";
@@ -23,6 +25,8 @@ const PAGE_SIZE = 20;
 
 interface ExploreViewProps {
   initialTab: ExploreTab;
+  /** Poster paths for the landing hero's background wall. */
+  posters?: string[];
 }
 
 /**
@@ -35,7 +39,7 @@ interface ExploreViewProps {
  * State lives entirely in the URL — both views read the same query keys so
  * back/forward navigation works as expected.
  */
-export function ExploreView(_: ExploreViewProps) {
+export function ExploreView({ posters = [] }: ExploreViewProps) {
   const searchParams = useSearchParams();
 
   const filters = useMemo(() => {
@@ -66,7 +70,7 @@ export function ExploreView(_: ExploreViewProps) {
   );
 
   if (!hasActiveFilters) {
-    return <ExploreLanding tab={filters.tab} />;
+    return <ExploreLanding tab={filters.tab} posters={posters} />;
   }
 
   return <ExploreResults filters={filters} />;
@@ -74,10 +78,36 @@ export function ExploreView(_: ExploreViewProps) {
 
 // ────────────────────────────── Landing ──────────────────────────────
 
-function ExploreLanding({ tab }: { tab: ExploreTab }) {
+function ExploreLanding({ tab, posters }: { tab: ExploreTab; posters: string[] }) {
   return (
     <div className="space-y-12 pb-12 pt-2 sm:pt-6">
-      <header className="space-y-6 text-center">
+      <header className="relative isolate space-y-6 overflow-hidden rounded-[28px] px-4 py-16 text-center sm:py-24">
+        {/* Poster wall, faded out towards the edges so it sits behind the
+            hero rather than competing with it. Static and unoptimized: TMDB
+            already serves w185 from its CDN. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 grid grid-cols-6 content-center gap-2 opacity-35 sm:grid-cols-8 lg:grid-cols-12"
+          style={{
+            maskImage: "radial-gradient(ellipse 80% 75% at 50% 45%, black 20%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse 80% 75% at 50% 45%, black 20%, transparent 80%)",
+          }}
+        >
+          {posters.map((path) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={path}
+              src={tmdbImage(path, "w185")}
+              alt=""
+              loading="lazy"
+              className="aspect-[2/3] w-full rounded-md object-cover"
+            />
+          ))}
+        </div>
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.85)_0%,rgba(0,0,0,0.4)_60%,transparent_100%)]"
+        />
         <h1 className="bg-gradient-to-r from-white via-white/90 to-white/60 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl lg:text-6xl">
           What are you looking for?
         </h1>

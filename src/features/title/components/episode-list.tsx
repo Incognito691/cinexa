@@ -5,10 +5,12 @@ import Link from "next/link";
 import { ChevronDown, Play, Star } from "lucide-react";
 import { useState } from "react";
 
+import { AiringTime } from "@/components/airing-time";
 import { tmdbImage } from "@/lib/env";
 import { cn } from "@/lib/utils";
-import type { TvEpisode } from "@/types/media";
+import type { NextAiring, TvEpisode } from "@/types/media";
 
+import { airingSchedule, type EpisodeAiring } from "../lib/airing";
 import { formatDate, formatRuntime } from "./parts";
 
 /** Episodes shown before the rest collapse behind "Show more". */
@@ -26,11 +28,14 @@ const EPISODE_LIMIT = 3;
 export function EpisodeList({
   episodes,
   titleId,
+  nextAiring,
 }: {
   episodes: TvEpisode[];
   titleId: number;
+  nextAiring?: NextAiring | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const schedule = airingSchedule(episodes, nextAiring);
 
   const visible = expanded ? episodes : episodes.slice(0, EPISODE_LIMIT);
   const hidden = episodes.length - visible.length;
@@ -48,7 +53,12 @@ export function EpisodeList({
     <div className="space-y-3">
       <ol className="space-y-2">
         {visible.map((episode) => (
-          <EpisodeCard key={episode.id} episode={episode} titleId={titleId} />
+          <EpisodeCard
+            key={episode.id}
+            episode={episode}
+            titleId={titleId}
+            airing={schedule.get(episode.id)}
+          />
         ))}
       </ol>
 
@@ -78,16 +88,17 @@ export function EpisodeList({
 function EpisodeCard({
   episode,
   titleId,
+  airing,
 }: {
   episode: TvEpisode;
   titleId: number;
+  /** Set only for episodes that haven't aired yet. */
+  airing?: EpisodeAiring;
 }) {
   const still = episode.stillPath ? tmdbImage(episode.stillPath, "w300") : null;
-  const aired = formatDate(episode.airDate);
+  // An upcoming episode shows its air time instead of a bare date.
+  const aired = airing ? null : formatDate(episode.airDate);
   const rating = episode.rating > 0 ? (episode.rating / 2).toFixed(1) : null;
-  const upcoming = episode.airDate
-    ? new Date(`${episode.airDate}T00:00:00Z`) > new Date()
-    : false;
 
   return (
     <li
@@ -107,7 +118,9 @@ function EpisodeCard({
               src={still}
               alt=""
               fill
-              sizes="176px"
+              // TMDB's w300 is already the right size. Through the optimizer,
+              // "Show more" queued a dozen at once and some came back broken.
+              unoptimized
               className="object-cover"
             />
           ) : null}
@@ -132,15 +145,16 @@ function EpisodeCard({
 
           <p className="flex flex-wrap items-center gap-x-2 text-[11px] text-white/45">
             {aired ? <span>{aired}</span> : null}
-            {episode.runtime ? (
+            {episode.runtime && !airing ? (
               <>
                 <span aria-hidden>·</span>
                 <span>{formatRuntime(episode.runtime)}</span>
               </>
             ) : null}
-            {upcoming ? (
-              <span className="rounded-full bg-white/[0.08] px-2 py-0.5 font-medium text-white/70">
-                Upcoming
+            {airing ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-medium text-white/85">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                {airing.estimated ? "Estimated" : "Airs"} <AiringTime at={airing.at} mode={airing.mode} />
               </span>
             ) : null}
           </p>

@@ -154,6 +154,12 @@ Client state goes through **one** React Query key (`["library","keys"]`, served 
 
 `features/library/lib/entries.ts` hydrates stored TMDB ids into poster cards, one cached detail request each, and **drops any title the content filter now blocks** — so saving something is not a way to keep access to it after moderation rejects it.
 
+### Anime (`/anime`, `src/server/anilist/`, `src/features/anime/`)
+
+Metadata comes from **AniList** (free GraphQL, no key, **30 req/min**). `fetchAnimeHome()` loads every rail in **one** aliased query, cached 30 min. `isAdult: false` plus `genre_not_in: ["Hentai","Ecchi"]` keep explicit titles off the page; AniList items don't pass through the TMDB list-level filter.
+
+Cards carry **AniList ids** and link to `/anime/:id/:slug` (slug is cosmetic). That route resolves the id with `resolveAnilist()` and renders the TMDB detail view **in place** (no redirect, so the URL stays under `/anime`); `TvDetailView`'s `basePath` keeps season links there too. Canonical metadata still points at `/tv/:id` or `/movie/:id`. The anime route also fetches AniList's `nextAiringEpisode`; `airingSchedule()` (`features/title/lib/airing.ts`) matches it to the TMDB episode airing within a day (by date, not number: split-cour seasons renumber) and projects later episodes weekly as estimates. Without it, upcoming episodes show TMDB's date only. Resolution uses the Fribb/anime-lists cross-reference (held in module memory for a day; it's ~6 MB, over Next's 2 MB data-cache limit), then falls back to a TMDB title search with any "Season N" suffix split off. The TMDB detail page then runs the full content filter, so a blocked title still 404s. Links use `prefetch={false}` so a rail in view doesn't trigger twenty resolutions.
+
 ### Watch progress
 
 The player is a cross-origin iframe, so progress only exists if the provider hands it over. **VidLink** (`SOURCES[0]`) posts `{ type: "PLAYER_EVENT", data: { currentTime, duration } }` and accepts `?startAt=`; SuperEmbed and VidSrc post nothing and can't seek, so on those two a title still reaches Continue Watching (via the dwell timer) but with no bar and no resume.
@@ -164,7 +170,7 @@ The player is a cross-origin iframe, so progress only exists if the provider han
 - The dwell timer still exists as the fallback for the two silent providers. It lives in `EpisodeNav` for TV (it also drives the watched tick) and in `WatchTracker` for movies — hence `dwellFallback`.
 
 - `package.json` still lists `webtorrent` and `plyr-react`, neither imported anywhere in `src/` — playback is embeds only (see the note in `features/watch/lib/sources.ts` on why browser WebTorrent can't reach YTS swarms).
-- Planned order: persistence (Prisma + Postgres + next-auth) → title detail → AI (a "because you watched" home rail plus an `/ai` chat page, movies only, on the existing `OPENAI_API_KEY` following the fetch pattern in `filter/layers/layer-9-ai.ts`) → watch/player → settings.
+- Planned order: persistence (Prisma + Postgres + next-auth) → title detail → AI ("because you watched" home rail; the `/ai` chat was dropped for `/surprise`, a random pick by type + genre via `/api/discover`) → watch/player → settings.
 - `next.config.ts` whitelists TMDB, gstatic, Unsplash, and `via.placeholder.com` for `next/image` remote patterns.
 
 ## Conventions

@@ -150,13 +150,13 @@ function BentoCard({
       ) : null}
 
       {/* Top-left chip */}
-      <span className="absolute left-3 top-3 rounded-md border border-white/15 bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur">
+      <span className="absolute left-3 top-3 rounded-md border border-white/15 bg-black/65 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/90">
         {item.mediaType === "tv" ? "Series" : "Film"}
       </span>
 
       {/* Top-right rating */}
       {rating ? (
-        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-300 backdrop-blur">
+        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-300">
           <Star className="h-2.5 w-2.5 fill-yellow-300" />
           {rating}
         </span>
@@ -164,7 +164,7 @@ function BentoCard({
 
       {/* Hover play overlay */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-container text-white shadow-lg shadow-primary/40 backdrop-blur-md">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-container text-white shadow-lg shadow-primary/40">
           <Play className="h-6 w-6 fill-current" />
         </span>
       </div>
