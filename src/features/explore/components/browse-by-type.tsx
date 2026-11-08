@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Clapperboard, Sparkles, Tv, type LucideIcon } from "lucide-react";
+import { Clapperboard, Tv, type LucideIcon } from "lucide-react";
 
 import { buildExploreHref } from "../lib/presets";
 
 interface TypeTile {
-  tab: "movies" | "tv" | "anime";
+  tab: "movies" | "tv";
   label: string;
   Icon: LucideIcon;
   gradient: string;
@@ -13,7 +13,6 @@ interface TypeTile {
 const TYPES: readonly TypeTile[] = [
   { tab: "movies", label: "Movies", Icon: Clapperboard, gradient: "from-rose-500/40 via-red-500/30 to-orange-500/20" },
   { tab: "tv", label: "TV Shows", Icon: Tv, gradient: "from-sky-500/40 via-blue-500/30 to-indigo-500/20" },
-  { tab: "anime", label: "Anime", Icon: Sparkles, gradient: "from-fuchsia-500/40 via-purple-500/30 to-violet-500/20" },
 ] as const;
 
 /**
@@ -31,7 +30,7 @@ export function BrowseByType() {
         <h2 className="text-lg font-semibold text-foreground">Browse by Type</h2>
       </header>
 
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {TYPES.map(({ tab, label, Icon, gradient }) => (
           <Link
             key={tab}

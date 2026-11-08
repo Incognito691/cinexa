@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 
+import { LOGO_GRADIENT, LogoGlyph } from "@/components/brand/logo";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/metadata";
 
 /**
@@ -37,24 +38,22 @@ export default function OpengraphImage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
-              borderRadius: 16,
-              color: "white",
-              fontSize: 38,
-              fontWeight: 700,
+              backgroundImage: LOGO_GRADIENT,
+              borderRadius: 18,
             }}
           >
-            C
+            <LogoGlyph size={44} />
           </div>
           <div
             style={{
               color: "white",
-              fontSize: 34,
-              fontWeight: 600,
-              letterSpacing: 8,
+              fontSize: 44,
+              fontWeight: 700,
+              letterSpacing: -1,
+              display: "flex",
             }}
           >
-            {SITE_NAME.toUpperCase()}
+            cine<span style={{ color: "#e50914" }}>x</span>a
           </div>
         </div>
 

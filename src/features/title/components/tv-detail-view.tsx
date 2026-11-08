@@ -3,7 +3,7 @@ import { ArrowUpRight, Play } from "lucide-react";
 
 import { LibraryButton } from "@/features/library";
 import { cn } from "@/lib/utils";
-import type { TvPage } from "@/types/media";
+import type { NextAiring, TvPage } from "@/types/media";
 
 import { EpisodeList } from "./episode-list";
 import {
@@ -34,7 +34,14 @@ export function TvDetailView({
   seasons,
   selectedSeason,
   episodes,
-}: TvPage) {
+  basePath,
+  nextAiring,
+}: TvPage & {
+  /** Where season links point. `/anime/:id/:slug` keeps anime on its own URL. */
+  basePath?: string;
+  /** Exact next air time (anime, from AniList); TMDB alone only has dates. */
+  nextAiring?: NextAiring | null;
+}) {
   const firstAired = detail.releaseDate?.slice(0, 4);
   const lastAired = detail.lastAirDate?.slice(0, 4);
   // "2019" for a single-year show, "2019 – 2023" for a finished run,
@@ -114,12 +121,12 @@ export function TvDetailView({
               <SeasonPicker
                 seasons={seasons}
                 selected={selectedSeason}
-                titleId={detail.id}
+                basePath={basePath ?? `/tv/${detail.id}`}
               />
             }
           >
             {episodes.length > 0 ? (
-              <EpisodeList episodes={episodes} titleId={detail.id} />
+              <EpisodeList episodes={episodes} titleId={detail.id} nextAiring={nextAiring} />
             ) : (
               <p className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-5 py-8 text-center text-sm text-white/50">
                 No episode details available for this season yet.
@@ -160,11 +167,11 @@ export function TvDetailView({
 function SeasonPicker({
   seasons,
   selected,
-  titleId,
+  basePath,
 }: {
   seasons: TvPage["seasons"];
   selected: number;
-  titleId: number;
+  basePath: string;
 }) {
   if (seasons.length <= 1) return null;
 
@@ -176,7 +183,7 @@ function SeasonPicker({
           return (
             <li key={season.seasonNumber}>
               <Link
-                href={`/tv/${titleId}?season=${season.seasonNumber}`}
+                href={`${basePath}?season=${season.seasonNumber}`}
                 scroll={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(

@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { Compass, Folder } from "lucide-react";
+import { Folder, FolderHeart } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { LibraryEmptyState } from "@/components/library-empty-state";
 import { MediaCard } from "@/components/media/media-card";
 import { ManageCollection } from "@/features/library";
 import { loadCollectionEntries } from "@/features/library/lib/entries";
@@ -53,7 +52,18 @@ export default async function MyCollectionPage() {
       </header>
 
       {entries.length === 0 ? (
-        <EmptyState signedIn={signedIn} />
+        <LibraryEmptyState
+          icon={FolderHeart}
+          signedIn={signedIn}
+          path="/my-collection"
+          posterOffset={6}
+          title={signedIn ? "Your shelf is empty" : "Build your own shelf"}
+          body={
+            signedIn
+              ? "Use “Add to collection” on any title, then Manage to sort it into folders."
+              : "Sign in to save titles and sort them into folders like Weekend, Rewatch or Date night."
+          }
+        />
       ) : (
         <div className="space-y-10">
           {unfiled.length > 0 ? (
@@ -119,20 +129,3 @@ function FolderSection({
   );
 }
 
-function EmptyState({ signedIn }: { signedIn: boolean }) {
-  return (
-    <div className="flex flex-wrap items-center gap-4 rounded-stitch-xl border border-white/[0.08] bg-white/[0.03] p-6">
-      <p className="text-sm text-white/60">
-        {signedIn
-          ? "Nothing saved yet. Use “Add to collection” on any title, then Manage to sort it into folders."
-          : "Your collection lives with your account."}
-      </p>
-      <Button asChild>
-        <Link href="/explore">
-          <Compass aria-hidden />
-          Browse titles
-        </Link>
-      </Button>
-    </div>
-  );
-}

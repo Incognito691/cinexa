@@ -69,7 +69,10 @@ export function AppShell({ children, userMenu }: AppShellProps) {
       {/* Main column — left padding tracks the sidebar width so content never sits under it. */}
       <div
         className={cn(
-          "flex min-h-screen flex-col p-3 pt-0 transition-[padding] duration-300 ease-out",
+          // No padding transition: animating it re-laid-out and repainted the
+          // whole page every frame (10fps on an integrated GPU, with black
+          // flashes). The content snaps once; the sidebar alone animates.
+          "flex min-h-screen flex-col p-3 pt-0",
           "md:pl-[calc(var(--sidebar-w,260px)+1.5rem)]",
         )}
         style={{ "--sidebar-w": sidebarWidth } as React.CSSProperties}

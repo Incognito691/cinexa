@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { ExploreView } from "@/features/explore";
 import { buildMetadata } from "@/lib/metadata";
+import { fetchTrending } from "@/server/tmdb";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +24,20 @@ export const metadata = buildMetadata({
  * URL carries any filter param (`tab` is always present), the same view
  * swaps to a results grid with the active-filter chip + pagination.
  */
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  // Background wall for the landing hero. Trending is content-filtered and
+  // cached; a failure just means no wall.
+  const pages = await Promise.all(
+    [1, 2].map((page) => fetchTrending({ page }).then((r) => r.items, () => [])),
+  );
+  const posters = [
+    ...new Set(pages.flat().flatMap((i) => (i.posterPath ? [i.posterPath] : []))),
+  ].slice(0, 36);
+
   return (
     <main className="px-3 pb-16 sm:px-6 lg:px-8">
       <Suspense fallback={null}>
-        <ExploreView initialTab="movies" />
+        <ExploreView initialTab="movies" posters={posters} />
       </Suspense>
     </main>
   );

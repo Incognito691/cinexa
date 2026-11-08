@@ -93,7 +93,7 @@ export function MediaCard({
             {language}
           </span>
         ) : (
-          <span className="rounded-md border border-white/15 bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur">
+          <span className="rounded-md border border-white/15 bg-black/65 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/90">
             {item.mediaType === "tv" ? "Series" : "Movie"}
           </span>
         )}
@@ -101,7 +101,7 @@ export function MediaCard({
 
       {/* Top-right rating */}
       {rating ? (
-        <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-300 backdrop-blur">
+        <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-300">
           <Star className="h-2.5 w-2.5 fill-yellow-300" />
           {rating}
         </span>
@@ -115,7 +115,7 @@ export function MediaCard({
           isGrid && "items-start pt-[38%]",
         )}
       >
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container text-white shadow-lg shadow-primary/40 backdrop-blur-md">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container text-white shadow-lg shadow-primary/40">
           <Play className="h-5 w-5 fill-current" />
         </span>
       </div>

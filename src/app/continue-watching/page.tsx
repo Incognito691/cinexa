@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { Play } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { LibraryEmptyState } from "@/components/library-empty-state";
 import { ContinueCard } from "@/features/continue-watching";
 import { loadContinueCards } from "@/features/continue-watching/lib/entries";
 import { buildMetadata } from "@/lib/metadata";
@@ -39,19 +38,18 @@ export default async function ContinueWatchingPage() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-4 rounded-stitch-xl border border-white/[0.08] bg-white/[0.03] p-6">
-          <p className="text-sm text-white/60">
-            {signedIn
-              ? "Nothing in progress. Start something and it shows up here."
-              : "Your watch history lives with your account."}
-          </p>
-          <Button asChild>
-            <Link href="/explore">
-              <Play className="fill-current" aria-hidden />
-              Browse titles
-            </Link>
-          </Button>
-        </div>
+        <LibraryEmptyState
+          icon={PlayCircle}
+          signedIn={signedIn}
+          path="/continue-watching"
+          posterOffset={3}
+          title={signedIn ? "Nothing in progress" : "Pick up right where you left off"}
+          body={
+            signedIn
+              ? "Start a movie or an episode and it shows up here with your progress."
+              : "Sign in and every movie and episode you start is saved at the exact second you stopped."
+          }
+        />
       )}
     </div>
   );

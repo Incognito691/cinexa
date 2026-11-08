@@ -7,7 +7,6 @@ import {
   ChevronsRight,
   Compass,
   Download,
-  Film,
   Folder,
   Heart,
   Home,
@@ -18,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { LogoMark, Wordmark } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -167,7 +167,7 @@ function NavList({
 }
 
 function Divider() {
-  return <li aria-hidden className="my-3 h-px w-full bg-white/[0.06]" />;
+  return <div aria-hidden className="my-3 h-px w-full bg-white/[0.06]" />;
 }
 
 export function SidebarContent({
@@ -193,19 +193,9 @@ export function SidebarContent({
             expanded ? "" : "justify-center",
           )}
         >
-          {/* Solid primary, not the old purple→pink gradient: every other
-              accent in the app is this red, so the mark matches the product
-              instead of a palette nothing else uses. A film strip rather than
-              a play triangle — a triangle on red is YouTube's mark, not ours.
-              Same glyph as the favicon. */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/30">
-            <Film className="h-[18px] w-[18px] text-white" />
-          </div>
-          {expanded ? (
-            <span className="font-display text-[17px] font-semibold uppercase tracking-[0.18em] text-foreground">
-              Cinexa
-            </span>
-          ) : null}
+          {/* Same mark as the favicon; see components/brand/logo.tsx. */}
+          <LogoMark className="h-9 w-9" />
+          {expanded ? <Wordmark className="text-[22px]" /> : null}
         </Link>
         {expanded ? (
           <button
@@ -278,7 +268,9 @@ export function AppSidebar({ expanded, onToggle }: AppSidebarProps) {
         <div
           className={cn(
             "flex h-full flex-col rounded-2xl border border-white/[0.07] text-sidebar-foreground",
-            "bg-white/[0.04] backdrop-blur-2xl backdrop-saturate-200",
+            // No backdrop blur: nothing scrolls behind the sidebar, so the blur
+            // only cost a full re-sample of the page on every animation frame.
+            "bg-white/[0.04]",
             "shadow-[inset_1px_0_0_0_rgba(255,255,255,0.04),0_8px_30px_-12px_rgba(0,0,0,0.5)] overflow-hidden",
           )}
         >
@@ -297,7 +289,6 @@ export type { LucideIcon };
 export {
   Compass,
   Download,
-  Film,
   Folder,
   Heart,
   Home,

@@ -39,12 +39,6 @@ const PRESET_SEEDS: PresetSeed[] = [
       "vote_count.gte": 200,
     },
   },
-  // Anime tab already implies TV + genre 16 + ja on the server.
-  {
-    id: "anime-hits",
-    label: "Anime Hits",
-    params: { tab: "anime" },
-  },
   // Bollywood / Hindi-language recent movies.
   {
     id: "latest-hindi",

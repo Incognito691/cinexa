@@ -126,6 +126,13 @@ export interface TvSeasonSummary {
   posterPath: string | null;
 }
 
+/** An episode's exact air time, from AniList (TMDB only knows the day). */
+export interface NextAiring {
+  episode: number;
+  /** Unix seconds. */
+  airingAt: number;
+}
+
 export interface TvEpisode {
   id: number;
   episodeNumber: number;

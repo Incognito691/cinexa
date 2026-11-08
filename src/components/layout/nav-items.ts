@@ -7,6 +7,7 @@ import {
   LogOut,
   PlayCircle,
   Settings,
+  Shuffle,
   Sparkles,
   Library,
   type LucideIcon,
@@ -23,7 +24,8 @@ export interface NavItem {
 export const primaryNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home },
   { label: "Explore", href: "/explore", icon: Compass },
-  { label: "AI Chat", href: "/ai", icon: Sparkles },
+  { label: "Surprise", href: "/surprise", icon: Shuffle },
+  { label: "Anime", href: "/anime", icon: Sparkles },
 ];
 
 export const libraryNav: NavItem[] = [
