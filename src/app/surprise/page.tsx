@@ -1,7 +1,9 @@
 import { SurpriseView, type Genre } from "@/features/surprise";
 import { buildMetadata } from "@/lib/metadata";
+import { tmdbImage } from "@/lib/env";
+import { fetchAnimeGenres, fetchAnimeWallCovers } from "@/server/anilist/home";
 import { fetchTrending, tmdbFetch } from "@/server/tmdb";
-import type { MediaCardItem, MediaType } from "@/types/media";
+import type { MediaType } from "@/types/media";
 
 export const revalidate = 600;
 
@@ -16,28 +18,45 @@ export const metadata = buildMetadata({
 const GENRE_LIST_TTL = 60 * 60 * 24;
 
 /** A failed genre list just leaves "Any genre"; the page still works. */
-const genresFor = (type: MediaType) =>
-  tmdbFetch<{ genres?: Genre[] }>(`/genre/${type}/list`, {}, GENRE_LIST_TTL).then(
-    (r) => r.genres ?? [],
+const genresFor = (type: MediaType): Promise<Genre[]> =>
+  tmdbFetch<{ genres?: { id: number; name: string }[] }>(`/genre/${type}/list`, {}, GENRE_LIST_TTL).then(
+    (r) => (r.genres ?? []).map((g) => ({ id: String(g.id), name: g.name })),
     () => [],
   );
 
-/** Trending titles for the background wall. Already content-filtered. */
-async function posterWall(): Promise<MediaCardItem[]> {
-  const pages = await Promise.all(
-    [1, 2, 3].map((page) => fetchTrending({ page }).then((r) => r.items, () => [])),
+/** AniList genres are names, so the name is the id. */
+const animeGenres = (): Promise<Genre[]> =>
+  fetchAnimeGenres().then(
+    (names) => names.map((name) => ({ id: name, name })),
+    () => [],
   );
-  const seen = new Set<string>();
-  return pages.flat().filter((item) => {
-    const key = `${item.mediaType}:${item.id}`;
-    // Trending "all" also returns people, who have no poster.
-    if (!item.posterPath || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+
+/**
+ * Background posters for one type: trending titles, already content-filtered,
+ * as small-poster URLs. The shuffle flips through the same images, so the
+ * spin shows the kind of thing you asked for.
+ */
+async function posterWall(type: MediaType): Promise<string[]> {
+  const pages = await Promise.all(
+    [1, 2, 3].map((page) => fetchTrending({ type, page }).then((r) => r.items, () => [])),
+  );
+  const urls = pages.flat().flatMap((i) => (i.posterPath ? [tmdbImage(i.posterPath, "w185")!] : []));
+  return [...new Set(urls)];
 }
 
 export default async function SurprisePage() {
-  const [wall, movie, tv] = await Promise.all([posterWall(), genresFor("movie"), genresFor("tv")]);
-  return <SurpriseView wall={wall} genres={{ movie, tv }} />;
+  const [movieWall, tvWall, animeWall, movie, tv, anime] = await Promise.all([
+    posterWall("movie"),
+    posterWall("tv"),
+    fetchAnimeWallCovers().catch(() => []),
+    genresFor("movie"),
+    genresFor("tv"),
+    animeGenres(),
+  ]);
+  return (
+    <SurpriseView
+      walls={{ movie: movieWall, tv: tvWall, anime: animeWall }}
+      genres={{ movie, tv, anime }}
+    />
+  );
 }

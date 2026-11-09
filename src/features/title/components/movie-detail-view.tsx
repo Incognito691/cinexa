@@ -20,7 +20,16 @@ import { TrailerDialog } from "./trailer-dialog";
  * Movie detail page. Shares its frame with the TV page via `parts.tsx`; the
  * box-office block is the only thing unique to a film.
  */
-export function MovieDetailView({ detail, cast, trailer, similar }: MoviePage) {
+export function MovieDetailView({
+  detail,
+  cast,
+  trailer,
+  similar,
+  watchPath,
+}: MoviePage & {
+  /** Where the film plays. Anime films pass `/anime/:id/:slug/watch`. */
+  watchPath?: string;
+}) {
   const facts = [
     detail.releaseDate?.slice(0, 4),
     detail.runtime ? formatRuntime(detail.runtime) : null,
@@ -35,7 +44,7 @@ export function MovieDetailView({ detail, cast, trailer, similar }: MoviePage) {
         actions={
           <>
             <Link
-              href={`/watch/movie/${detail.id}`}
+              href={watchPath ?? `/watch/movie/${detail.id}`}
               className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:opacity-90"
             >
               <Play className="h-4 w-4 fill-current" />

@@ -14,7 +14,8 @@ import {
 import { SettingsRow, SettingsSection } from "./settings-shell";
 import { Segmented } from "./segmented";
 
-const OPTIONS = SOURCES.map((s) => ({ value: s.id, label: s.label }));
+// Anime-only sources can't be the site-wide default; anime picks its own.
+const OPTIONS = SOURCES.filter((s) => !s.animeOnly).map((s) => ({ value: s.id, label: s.label }));
 
 /**
  * Which provider a player opens on.

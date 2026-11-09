@@ -94,13 +94,27 @@ export function WatchTracker({
     const onMessage = (event: MessageEvent) => {
       if (!TRUSTED_ORIGINS.has(event.origin)) return;
 
+      // VidLink: { type: "PLAYER_EVENT", data: { currentTime, duration } }.
+      // Zoko: { channel: "zokoanime", type: "watching-log", currentTime, duration }.
       const data = event.data as
-        | { type?: string; data?: { currentTime?: number; duration?: number } }
+        | {
+            type?: string;
+            channel?: string;
+            currentTime?: number;
+            duration?: number;
+            data?: { currentTime?: number; duration?: number };
+          }
         | undefined;
-      if (data?.type !== "PLAYER_EVENT") return;
+      const position =
+        data?.type === "PLAYER_EVENT"
+          ? data.data
+          : data?.channel === "zokoanime" && data.type === "watching-log"
+            ? data
+            : null;
+      if (!position) return;
 
-      const currentTime = Number(data.data?.currentTime);
-      const duration = Number(data.data?.duration);
+      const currentTime = Number(position.currentTime);
+      const duration = Number(position.duration);
       if (!Number.isFinite(currentTime) || !Number.isFinite(duration)) return;
       if (duration <= 0) return;
 

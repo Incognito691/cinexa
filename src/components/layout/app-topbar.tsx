@@ -14,14 +14,28 @@ interface AppTopbarProps {
   userMenu?: React.ReactNode;
 }
 
+/** Pages without the topbar search. */
+const NO_SEARCH = [
+  "/explore",
+  "/settings",
+  "/favourites",
+  "/my-collection",
+  "/continue-watching",
+  "/surprise",
+];
+
 export function AppTopbar({ onMenuClick, userMenu }: AppTopbarProps) {
   const pathname = usePathname();
-  // The explore page has its own prominent search input. Hide the topbar
-  // one there so we don't end up with two search fields.
-  const onExplore = pathname?.startsWith("/explore") ?? false;
+  const path = pathname ?? "";
+  // Search only where you're looking for something to watch. Explore has its
+  // own big search field; the library and settings pages are about what you
+  // already have, and Surprise picks for you.
+  const hideSearch = NO_SEARCH.some((prefix) => path.startsWith(prefix));
   // The player owns the screen — search and the avatar both compete with the
-  // picture, so the whole bar goes on /watch.
-  const onWatch = pathname?.startsWith("/watch") ?? false;
+  // picture, so the whole bar goes on /watch and the anime player.
+  const onWatch = path.startsWith("/watch") || /^\/anime\/[^/]+\/[^/]+\/watch/.test(path);
+  // On the anime pages the search is anime-only, from AniList.
+  const onAnime = pathname?.startsWith("/anime") ?? false;
 
   const [_scrolled, setScrolled] = useState(false);
 
@@ -50,10 +64,13 @@ export function AppTopbar({ onMenuClick, userMenu }: AppTopbarProps) {
         <Menu />
       </Button>
 
-      {!onExplore ? (
+      {!hideSearch ? (
         <SearchBar
+          // Remount on switch so a half-typed term doesn't carry its old results.
+          key={onAnime ? "anime" : "all"}
           variant="compact"
-          placeholder="Search for films, directors, or actors…"
+          scope={onAnime ? "anime" : "all"}
+          placeholder={onAnime ? "Search anime…" : "Search for films, directors, or actors…"}
           className="min-w-0 flex-1 max-w-2xl"
         />
       ) : (

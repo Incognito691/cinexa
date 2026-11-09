@@ -1326,5 +1326,465 @@
   "movie:354912": {
     "class": "SAFE",
     "confidence": 0.99
+  },
+  "tv:2490": {
+    "class": "SAFE",
+    "confidence": 1
+  },
+  "tv:133359": {
+    "class": "MATURE",
+    "confidence": 0.98
+  },
+  "movie:191562": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:1300968": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:279246": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:213375": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:259909": {
+    "class": "MATURE",
+    "confidence": 0.98
+  },
+  "tv:289517": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "tv:258989": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:292741": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:96677": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "tv:303044": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "tv:253372": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:314271": {
+    "class": "SAFE",
+    "confidence": 0.85
+  },
+  "movie:1170608": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "tv:300146": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "tv:37854": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:1567605": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:81723": {
+    "class": "MATURE",
+    "confidence": 0.9
+  },
+  "tv:153312": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:1654940": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "tv:73223": {
+    "class": "SAFE",
+    "confidence": 1
+  },
+  "tv:248947": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:26318": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:46261": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:37858": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:96884": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:157571": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:297557": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:288589": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:196950": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:286984": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:31678": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:134667": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:295999": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:9103": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:36089": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:35753": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "tv:35610": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:37473": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:237150": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:283891": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:940721": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:103502": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:1607127": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:131631": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:24": {
+    "class": "MATURE",
+    "confidence": 0.99
+  },
+  "movie:1384528": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:1278387": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:845781": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:12444": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:1146825": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:698687": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:1020883": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:1083884": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:527527": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:1659389": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:259350": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:1310216": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:259341": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "movie:333339": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "tv:6515": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:2004": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:4635": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:36473": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:249": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "tv:63398": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:80550": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:58852": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:32829": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:1892": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:1566": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "tv:2038": {
+    "class": "SAFE",
+    "confidence": 0.99
+  },
+  "tv:2016": {
+    "class": "SAFE",
+    "confidence": 0.98
+  },
+  "tv:313068": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:149325": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:242361": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:494591": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:304791": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:41517": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:413242": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:651721": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:1269422": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:1197605": {
+    "class": "MATURE",
+    "confidence": 0.8
+  },
+  "movie:391226": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:181884": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:1315384": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:88799": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:801049": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:452214": {
+    "class": "EROTIC",
+    "confidence": 0.9
+  },
+  "movie:14165": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:678727": {
+    "class": "EROTIC",
+    "confidence": 0.85
+  },
+  "movie:472001": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:1703834": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:35647": {
+    "class": "MATURE",
+    "confidence": 0.9
+  },
+  "movie:23202": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:1076005": {
+    "class": "SAFE",
+    "confidence": 0.85
+  },
+  "movie:1178787": {
+    "class": "SAFE",
+    "confidence": 0.7
+  },
+  "movie:49110": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:118285": {
+    "class": "EROTIC",
+    "confidence": 0.9
+  },
+  "movie:709797": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:1203865": {
+    "class": "SAFE",
+    "confidence": 0.7
+  },
+  "movie:863737": {
+    "class": "SAFE",
+    "confidence": 0.85
+  },
+  "movie:191579": {
+    "class": "MATURE",
+    "confidence": 0.9
+  },
+  "movie:16138": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:240614": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:1438950": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:99214": {
+    "class": "MATURE",
+    "confidence": 0.85
+  },
+  "movie:49524": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:1440162": {
+    "class": "SAFE",
+    "confidence": 0.9
+  },
+  "movie:49207": {
+    "class": "MATURE",
+    "confidence": 0.95
+  },
+  "movie:526572": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:382597": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:1572051": {
+    "class": "SAFE",
+    "confidence": 0.95
+  },
+  "movie:1137010": {
+    "class": "MATURE",
+    "confidence": 0.9
   }
 }

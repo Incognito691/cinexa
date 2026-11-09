@@ -6,8 +6,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { animeHref } from "@/lib/anime-slug";
 import { tmdbImage } from "@/lib/env";
+import { request } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
+import type { AnimeItem } from "@/types/anime";
 import type { MediaCardItem } from "@/types/media";
 
 import { getExploreFilters } from "../api";
@@ -19,6 +22,46 @@ const MIN_CHARS = 1;
 
 const startsWith = (title: string, term: string) =>
   title.toLowerCase().startsWith(term.toLowerCase());
+
+/** One dropdown row, whichever catalogue it came from. */
+interface Suggestion {
+  key: string;
+  title: string;
+  image: string | null;
+  meta: string;
+  href: string;
+}
+
+const fromTmdb = (item: MediaCardItem): Suggestion => {
+  const year = item.releaseDate?.slice(0, 4);
+  return {
+    key: `${item.mediaType}-${item.id}`,
+    title: item.title,
+    image: item.posterPath ? (tmdbImage(item.posterPath, "w92") ?? null) : null,
+    meta: [
+      item.mediaType === "movie" ? "Movie" : "TV Show",
+      year,
+      item.rating > 0 ? `★ ${(item.rating / 2).toFixed(1)}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    href: item.mediaType === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`,
+  };
+};
+
+const fromAnime = (item: AnimeItem): Suggestion => ({
+  key: `anime-${item.id}`,
+  title: item.title,
+  image: item.cover,
+  meta: [
+    item.format === "MOVIE" ? "Anime movie" : "Anime",
+    item.seasonYear,
+    item.score ? `★ ${(item.score / 20).toFixed(1)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · "),
+  href: animeHref(item.id, item.title),
+});
 
 interface SearchBarProps {
   /** Initial value (e.g. when arriving from a previous search). */
@@ -33,6 +76,11 @@ interface SearchBarProps {
    */
   variant?: "hero" | "compact";
   placeholder?: string;
+  /**
+   * `anime` searches AniList instead of TMDB (anime only, linking to
+   * `/anime/...`); the topbar switches to it on the anime pages.
+   */
+  scope?: "all" | "anime";
 }
 
 /**
@@ -49,8 +97,10 @@ export function SearchBar({
   className,
   variant = "hero",
   placeholder = "Search for movies, TV shows, actors…",
+  scope = "all",
 }: SearchBarProps) {
   const isHero = variant === "hero";
+  const isAnime = scope === "anime";
   const router = useRouter();
   const [value, setValue] = useState(defaultValue);
   const [debounced, setDebounced] = useState(defaultValue.trim());
@@ -58,9 +108,10 @@ export function SearchBar({
   const [active, setActive] = useState(-1);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(value.trim()), 250);
+    // Longer pause for anime: AniList's rate limit is shared by every visitor.
+    const id = setTimeout(() => setDebounced(value.trim()), isAnime ? 400 : 250);
     return () => clearTimeout(id);
-  }, [value]);
+  }, [value, isAnime]);
 
   // `tab=trending` short-circuits to /trending server-side and ignores `q`,
   // which would make the dropdown show unrelated titles. Suggest movies there.
@@ -68,36 +119,51 @@ export function SearchBar({
 
   const hasTerm = debounced.length >= MIN_CHARS;
 
-  const { data, isFetching } = useQuery({
+  const tmdb = useQuery({
     queryKey: ["explore-suggest", suggestTab, debounced],
     queryFn: () => getExploreFilters({ tab: suggestTab, q: debounced, page: 1 }),
-    enabled: open && hasTerm,
+    enabled: open && hasTerm && !isAnime,
     staleTime: 60_000,
+  });
+
+  const anime = useQuery({
+    queryKey: ["anime-suggest", debounced],
+    queryFn: () => request<AnimeItem[]>(`/api/anime/search?q=${encodeURIComponent(debounced)}`),
+    enabled: open && hasTerm && isAnime,
+    staleTime: 5 * 60_000,
   });
 
   // TMDB ranks by popularity, so "a" returns titles that merely *contain* the
   // term. Float the ones that actually start with it; sort is stable, so
-  // popularity order survives inside each group.
-  const suggestions = [...(data?.items ?? [])]
-    .sort(
-      (a, b) =>
-        Number(startsWith(b.title, debounced)) -
-        Number(startsWith(a.title, debounced)),
-    )
-    .slice(0, MAX_SUGGESTIONS);
+  // popularity order survives inside each group. AniList already ranks by
+  // match.
+  const suggestions: Suggestion[] = isAnime
+    ? (anime.data ?? []).slice(0, MAX_SUGGESTIONS).map(fromAnime)
+    : [...(tmdb.data?.items ?? [])]
+        .sort(
+          (a, b) =>
+            Number(startsWith(b.title, debounced)) -
+            Number(startsWith(a.title, debounced)),
+        )
+        .slice(0, MAX_SUGGESTIONS)
+        .map(fromTmdb);
 
+  const { data, isFetching } = isAnime ? anime : tmdb;
   const isEmpty = data != null && suggestions.length === 0 && !isFetching;
   const showList = open && hasTerm && (suggestions.length > 0 || isEmpty);
 
-  const goToTitle = (item: MediaCardItem) => {
+  const goToTitle = (item: Suggestion) => {
     setOpen(false);
-    router.push(
-      item.mediaType === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`,
-    );
+    router.push(item.href);
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // There's no anime results page; Enter opens the best match.
+    if (isAnime) {
+      if (suggestions[0]) goToTitle(suggestions[0]);
+      return;
+    }
     setOpen(false);
     const trimmed = value.trim();
     const href = buildExploreHref({
@@ -130,7 +196,7 @@ export function SearchBar({
       role="search"
       onSubmit={handleSubmit}
       className={className}
-      aria-label="Search for movies and TV shows"
+      aria-label={isAnime ? "Search anime" : "Search for movies and TV shows"}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
@@ -191,16 +257,12 @@ export function SearchBar({
                 aria-selected={false}
                 className="px-3 py-6 text-center text-sm text-white/50"
               >
-                No titles match &ldquo;{debounced}&rdquo;
+                No {isAnime ? "anime" : "titles"} match &ldquo;{debounced}&rdquo;
               </li>
             ) : null}
             {suggestions.map((item, index) => {
-              const poster = item.posterPath
-                ? tmdbImage(item.posterPath, "w92")
-                : null;
-              const year = item.releaseDate?.slice(0, 4);
               return (
-                <li key={`${item.mediaType}-${item.id}`} role="none">
+                <li key={item.key} role="none">
                   <button
                     type="button"
                     id={`search-suggestion-${index}`}
@@ -213,12 +275,12 @@ export function SearchBar({
                     }`}
                   >
                     <span className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md bg-white/[0.06]">
-                      {poster ? (
+                      {item.image ? (
                         <Image
-                          src={poster}
+                          src={item.image}
                           alt=""
                           fill
-                          sizes="40px"
+                          unoptimized
                           className="object-cover"
                         />
                       ) : null}
@@ -227,13 +289,7 @@ export function SearchBar({
                       <span className="block truncate text-sm font-medium text-white">
                         {item.title}
                       </span>
-                      <span className="block text-xs text-white/50">
-                        {item.mediaType === "movie" ? "Movie" : "TV Show"}
-                        {year ? ` · ${year}` : ""}
-                        {item.rating > 0
-                          ? ` · ★ ${(item.rating / 2).toFixed(1)}`
-                          : ""}
-                      </span>
+                      <span className="block text-xs text-white/50">{item.meta}</span>
                     </span>
                   </button>
                 </li>

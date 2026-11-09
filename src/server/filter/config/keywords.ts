@@ -32,7 +32,10 @@ export const BLACKLISTED_KEYWORDS: readonly string[] = [
   "ullu originals",
   "kooku",
   "primeshots",
-  "hunters",
+  // Not bare "hunters": this list is matched as a substring against titles
+  // and overviews too, so it blocked every "bounty hunters" (Cowboy Bebop)
+  // and "demon hunters". The platform is still caught by its network name
+  // (config/networks.ts) and by "hunters originals" (config/phrases.ts).
   "rabbit movies",
   "moodx",
   "cineprime",

@@ -161,7 +161,7 @@ export function CastRail({ cast }: { cast: CastMember[] }) {
   if (cast.length === 0) return null;
   return (
     <Section title="Cast">
-      <ul className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]">
+      <ul className="scroll-slim -mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-3">
         {cast.map((member) => {
           const photo = member.profilePath
             ? tmdbImage(member.profilePath, "w185")
@@ -208,31 +208,36 @@ export function CompanyRow({
   if (companies.length === 0) return null;
   return (
     <Section title={title}>
-      <ul className="flex flex-wrap items-center gap-3">
+      <ul className="flex flex-wrap gap-4">
         {companies.map((company) => {
           const logo = company.logoPath
             ? tmdbImage(company.logoPath, "w185")
             : null;
           return (
-            <li
-              key={company.id}
-              className="flex h-16 items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4"
-            >
+            <li key={company.id} className="w-36 space-y-2">
+              {/* Real colours on a light tile. TMDB logos are mostly dark on
+                  transparent; forcing them white made any logo with a filled
+                  shape (a round badge, say) a featureless white blob. */}
+              <div className="flex h-16 items-center justify-center rounded-xl bg-white/95 px-4">
+                {logo ? (
+                  <Image
+                    src={logo}
+                    alt=""
+                    width={112}
+                    height={36}
+                    className="max-h-9 w-auto max-w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-center text-xs font-semibold leading-tight text-neutral-800">
+                    {company.name}
+                  </span>
+                )}
+              </div>
               {logo ? (
-                <Image
-                  src={logo}
-                  alt={company.name}
-                  width={72}
-                  height={32}
-                  // TMDB logos are mostly dark-on-transparent; the invert keeps
-                  // them visible on a dark card.
-                  className="h-8 w-auto object-contain opacity-80 [filter:brightness(0)_invert(1)]"
-                />
-              ) : (
-                <span className="text-sm font-medium text-white/80">
+                <p className="truncate text-center text-[11px] text-white/55" title={company.name}>
                   {company.name}
-                </span>
-              )}
+                </p>
+              ) : null}
             </li>
           );
         })}

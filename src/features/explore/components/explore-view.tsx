@@ -81,7 +81,7 @@ export function ExploreView({ posters = [] }: ExploreViewProps) {
 function ExploreLanding({ tab, posters }: { tab: ExploreTab; posters: string[] }) {
   return (
     <div className="space-y-12 pb-12 pt-2 sm:pt-6">
-      <header className="relative isolate space-y-6 overflow-hidden rounded-[28px] px-4 py-16 text-center sm:py-24">
+      <header className="relative isolate space-y-6 overflow-hidden rounded-[28px] px-4 py-12 text-center sm:py-16">
         {/* Poster wall, faded out towards the edges so it sits behind the
             hero rather than competing with it. Static and unoptimized: TMDB
             already serves w185 from its CDN. */}

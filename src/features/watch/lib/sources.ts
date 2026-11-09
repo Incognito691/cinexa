@@ -21,7 +21,16 @@ export interface PlaybackTarget {
   /** TV only. */
   season?: number;
   episode?: number;
+  /**
+   * Set when the title is anime the cross-reference knows: its MyAnimeList
+   * entry and *that entry's* episode number, which differ from TMDB's season
+   * numbering. Anime-only sources need it.
+   */
+  anime?: { malId: number; episode: number };
 }
+
+/** The anime player's origin; it posts events and takes commands. */
+export const ZOKO_ORIGIN = "https://zokoanime.video";
 
 export interface PlaybackSource {
   id: string;
@@ -33,11 +42,34 @@ export interface PlaybackSource {
    * messages from one of these are trusted — see `watch-tracker.tsx`.
    */
   progressOrigin?: string;
+  /** Only offered when `target.anime` is set, and the default there. */
+  animeOnly?: boolean;
   /** `startAt` seconds, when the provider supports resuming mid-stream. */
-  build: (target: PlaybackTarget, startAt?: number) => string;
+  build: (target: PlaybackTarget, startAt?: number, opts?: { autoplay?: boolean }) => string;
 }
 
 export const SOURCES: readonly PlaybackSource[] = [
+  {
+    id: "zoko",
+    label: "Anime",
+    hint: "Zoko — anime player numbered by MyAnimeList: skips intros and outros, plays the next episode, and resumes where you left off.",
+    progressOrigin: ZOKO_ORIGIN,
+    animeOnly: true,
+    // Resume is a `seek` command once the frame loads (see WatchPlayer); the
+    // URL has no start-time parameter.
+    build: ({ anime }, _startAt, opts) => {
+      if (!anime) return "about:blank";
+      const params = new URLSearchParams({
+        color: "e50914",
+        autoskip: "true",
+        autonext: "true",
+      });
+      // Only after an auto-advance: a cold start would begin muted.
+      if (opts?.autoplay) params.set("autoplay", "true");
+      // `/stream/anilist/...` 404s on their side for every id; MAL works.
+      return `${ZOKO_ORIGIN}/stream/mal/${anime.malId}/${anime.episode}/sub?${params}`;
+    },
+  },
   {
     id: "vidlink",
     label: "Primary",
@@ -86,10 +118,11 @@ export const SOURCES: readonly PlaybackSource[] = [
   },
 ] as const;
 
-export const DEFAULT_SOURCE_ID = SOURCES[0].id;
+/** The default for everything that isn't anime (anime defaults to Zoko). */
+export const DEFAULT_SOURCE_ID = "vidlink";
 
 export function getSource(id: string): PlaybackSource {
-  return SOURCES.find((s) => s.id === id) ?? SOURCES[0];
+  return SOURCES.find((s) => s.id === id) ?? SOURCES.find((s) => s.id === DEFAULT_SOURCE_ID)!;
 }
 
 /**
@@ -100,4 +133,5 @@ export function getSource(id: string): PlaybackSource {
  */
 export const SOURCE_PREFERENCE_KEY = "cinexa:default-source";
 
-export const SOURCE_IDS: readonly string[] = SOURCES.map((s) => s.id);
+/** Choosable as the site-wide default: anime-only sources can't play the rest. */
+export const SOURCE_IDS: readonly string[] = SOURCES.filter((s) => !s.animeOnly).map((s) => s.id);

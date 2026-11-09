@@ -31,8 +31,14 @@ export interface ContinueCard {
  * detail request for its title and artwork. A row whose title 404s or is now
  * filtered is dropped rather than rendered as a hole.
  */
-export async function loadContinueCards(limit = 8): Promise<ContinueCard[]> {
-  const entries = await getContinueWatching(limit);
+export async function loadContinueCards(
+  limit = 8,
+  /** Narrow the history (e.g. to anime) before any TMDB request is made. */
+  keep?: (entry: ContinueWatchingEntry) => boolean,
+): Promise<ContinueCard[]> {
+  const entries = keep
+    ? (await getContinueWatching(60)).filter(keep).slice(0, limit)
+    : await getContinueWatching(limit);
   const cards = await Promise.all(entries.map(toCard));
   return cards.filter((card): card is ContinueCard => card !== null);
 }

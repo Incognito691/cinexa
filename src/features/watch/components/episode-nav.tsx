@@ -6,15 +6,19 @@ import { useEffect, useState, useTransition } from "react";
 
 import { cn } from "@/lib/utils";
 import { markWatched, toggleWatched } from "@/server/watch-history";
-import type { TvEpisode, TvSeasonSummary } from "@/types/media";
+import type { TvEpisode, TvSeasonSummary, UpcomingEpisode } from "@/types/media";
 
 import { EpisodePicker } from "./episode-picker";
 import { AUTO_MARK_MS } from "./watch-tracker";
 
 interface EpisodeNavProps {
   tmdbId: number;
+  /** e.g. `/watch/tv/73223`; `?season=&episode=` is appended. */
+  watchPath: string;
   seasons: TvSeasonSummary[];
   episodes: TvEpisode[];
+  /** The next, not-yet-aired episode; shown in the picker, never navigated to. */
+  upcoming?: UpcomingEpisode | null;
   season: number;
   episode: number;
   /** `s{n}e{n}` keys already watched. */
@@ -37,8 +41,10 @@ interface EpisodeNavProps {
  */
 export function EpisodeNav({
   tmdbId,
+  watchPath,
   seasons,
   episodes,
+  upcoming,
   season,
   episode,
   watchedKeys,
@@ -73,7 +79,7 @@ export function EpisodeNav({
     index >= 0 && index < episodes.length - 1 ? episodes[index + 1] : undefined;
 
   const go = (episodeNumber: number) =>
-    router.push(`/watch/tv/${tmdbId}?season=${season}&episode=${episodeNumber}`);
+    router.push(`${watchPath}?season=${season}&episode=${episodeNumber}`);
 
   const stepClass =
     "inline-flex h-11 shrink-0 items-center rounded-xl px-3.5 text-xs font-medium text-white/65 transition hover:bg-white/[0.06] hover:text-white disabled:pointer-events-none disabled:opacity-25";
@@ -81,9 +87,10 @@ export function EpisodeNav({
   return (
     <div className="flex w-full min-w-0 items-center gap-1">
       <EpisodePicker
-        tmdbId={tmdbId}
+        watchPath={watchPath}
         seasons={seasons}
         episodes={episodes}
+        upcoming={upcoming}
         season={season}
         episode={episode}
         watched={watched}
