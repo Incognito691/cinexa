@@ -10,6 +10,12 @@ export interface MediaCardItem {
   releaseDate: string | null;
   rating: number;
   popularity: number;
+  /**
+   * Overrides for where the card links. Unset means `/movie|tv/:id` and
+   * `/watch/...`; the anime section sets them to its own `/anime/...` URLs.
+   */
+  href?: string;
+  watchHref?: string;
 }
 
 /**
@@ -131,6 +137,21 @@ export interface NextAiring {
   episode: number;
   /** Unix seconds. */
   airingAt: number;
+}
+
+/** When an unaired episode airs. */
+export interface EpisodeAiring {
+  /** Unix seconds. */
+  at: number;
+  /** "time": exact air time; "date": a UTC calendar day only. */
+  mode: "time" | "date";
+}
+
+/** The one not-yet-aired episode a list shows, after the aired ones. */
+export interface UpcomingEpisode {
+  episodeNumber: number;
+  name: string;
+  airing: EpisodeAiring | null;
 }
 
 export interface TvEpisode {

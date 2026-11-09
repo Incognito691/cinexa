@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TvEpisode } from "@/types/media";
 
-import { airingSchedule } from "./airing";
+import { cutAtNextEpisode } from "./airing";
 
 const ep = (n: number, airDate: string | null): TvEpisode => ({
   id: 1000 + n,
@@ -21,27 +21,43 @@ const episodes = [ep(6, "2026-11-07"), ep(7, "2026-11-14"), ep(8, "2026-11-21"),
 const NOW = Date.parse("2026-11-08T12:00:00Z") / 1000;
 // AniList's exact time for ep 7: 2026-11-14 14:00 UTC.
 const ep7At = Date.parse("2026-11-14T14:00:00Z") / 1000;
+const numbers = (c: { visible: TvEpisode[] }) => c.visible.map((e) => e.episodeNumber);
 
-describe("airingSchedule", () => {
-  it("uses AniList's exact time for the matching episode and projects weekly after it", () => {
-    const s = airingSchedule(episodes, { episode: 7, airingAt: ep7At }, NOW);
-    expect(s.has(1006)).toBe(false); // already aired
-    expect(s.get(1007)).toEqual({ at: ep7At, mode: "time", estimated: false });
-    expect(s.get(1008)).toEqual({ at: ep7At + 7 * 86_400, mode: "time", estimated: true });
-    expect(s.get(1009)?.estimated).toBe(true); // no TMDB date, still projected
+describe("cutAtNextEpisode", () => {
+  it("lists aired episodes plus only the next, with AniList's exact time", () => {
+    const cut = cutAtNextEpisode(episodes, { episode: 7, airingAt: ep7At }, NOW);
+    expect(numbers(cut)).toEqual([6, 7]);
+    expect(cut.nextId).toBe(1007);
+    expect(cut.airing).toEqual({ at: ep7At, mode: "time" });
+  });
+
+  it("moves on once AniList does: after 7 airs, 8 is next", () => {
+    const ep8At = ep7At + 7 * 86_400;
+    // Still Nov 14, so TMDB's date alone would call ep 7 "today".
+    const later = Date.parse("2026-11-14T16:00:00Z") / 1000;
+    const cut = cutAtNextEpisode(episodes, { episode: 8, airingAt: ep8At }, later);
+    expect(numbers(cut)).toEqual([6, 7, 8]);
+    expect(cut.airing).toEqual({ at: ep8At, mode: "time" });
   });
 
   it("matches by air date, not episode number (split-cour numbering differs)", () => {
-    const s = airingSchedule(episodes, { episode: 1, airingAt: ep7At }, NOW);
-    expect(s.get(1007)?.mode).toBe("time");
+    const cut = cutAtNextEpisode(episodes, { episode: 1, airingAt: ep7At }, NOW);
+    expect(cut.nextId).toBe(1007);
+    expect(cut.airing?.mode).toBe("time");
   });
 
-  it("falls back to TMDB dates without AniList, or when nothing lines up", () => {
-    const noMatch = airingSchedule(episodes, { episode: 7, airingAt: ep7At + 60 * 86_400 }, NOW);
-    for (const s of [airingSchedule(episodes, null, NOW), noMatch]) {
-      expect(s.get(1007)).toEqual({ at: Date.parse("2026-11-14T00:00:00Z") / 1000, mode: "date", estimated: false });
-      expect(s.has(1006)).toBe(false);
-      expect(s.has(1009)).toBe(false); // no date, nothing to show
+  it("falls back to TMDB's date without AniList, or when nothing lines up", () => {
+    const noMatch = cutAtNextEpisode(episodes, { episode: 7, airingAt: ep7At + 60 * 86_400 }, NOW);
+    for (const cut of [cutAtNextEpisode(episodes, null, NOW), noMatch]) {
+      expect(numbers(cut)).toEqual([6, 7]);
+      expect(cut.airing).toEqual({ at: Date.parse("2026-11-14T00:00:00Z") / 1000, mode: "date" });
     }
+  });
+
+  it("shows everything once a season has finished airing", () => {
+    const done = [ep(1, "2020-01-01"), ep(2, "2020-01-08")];
+    const cut = cutAtNextEpisode(done, null, NOW);
+    expect(numbers(cut)).toEqual([1, 2]);
+    expect(cut.nextId).toBeNull();
   });
 });

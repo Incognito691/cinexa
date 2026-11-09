@@ -5,12 +5,16 @@ import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import type { TvEpisode, TvSeasonSummary } from "@/types/media";
+import { AiringTime } from "@/components/airing-time";
+import type { TvEpisode, TvSeasonSummary, UpcomingEpisode } from "@/types/media";
 
 interface EpisodePickerProps {
-  tmdbId: number;
+  /** e.g. `/watch/tv/73223`; `?season=&episode=` is appended. */
+  watchPath: string;
   seasons: TvSeasonSummary[];
   episodes: TvEpisode[];
+  /** Listed after the aired episodes, disabled: there's nothing to play yet. */
+  upcoming?: UpcomingEpisode | null;
   season: number;
   episode: number;
   /** `s{n}e{n}` keys already watched, for the ticks. */
@@ -30,9 +34,10 @@ interface EpisodePickerProps {
  * lines. Radix would add a package for positioning we don't need.
  */
 export function EpisodePicker({
-  tmdbId,
+  watchPath,
   seasons,
   episodes,
+  upcoming,
   season,
   episode,
   watched,
@@ -61,7 +66,7 @@ export function EpisodePicker({
 
   const go = (nextSeason: number, nextEpisode: number) => {
     setOpen(false);
-    router.push(`/watch/tv/${tmdbId}?season=${nextSeason}&episode=${nextEpisode}`);
+    router.push(`${watchPath}?season=${nextSeason}&episode=${nextEpisode}`);
   };
 
   return (
@@ -158,6 +163,26 @@ export function EpisodePicker({
                 </li>
               );
             })}
+            {upcoming ? (
+              <li>
+                <div
+                  aria-disabled="true"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left opacity-60"
+                >
+                  <span className="w-6 shrink-0 text-xs font-semibold tabular-nums text-white/40">
+                    {upcoming.episodeNumber}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-white/70">{upcoming.name}</span>
+                  <span className="shrink-0 text-[11px] text-white/50">
+                    {upcoming.airing ? (
+                      <AiringTime at={upcoming.airing.at} mode={upcoming.airing.mode} />
+                    ) : (
+                      "Coming soon"
+                    )}
+                  </span>
+                </div>
+              </li>
+            ) : null}
           </ul>
         </div>
       ) : null}

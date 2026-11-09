@@ -1,9 +1,6 @@
-import { notFound } from "next/navigation";
-
-import { WatchView } from "@/features/watch";
+import { MovieWatchScreen } from "@/features/watch/screens";
 import { buildMetadata } from "@/lib/metadata";
 import { fetchMoviePage } from "@/server/tmdb";
-import { getResumePosition, isSignedIn } from "@/server/watch-history";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -26,29 +23,6 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function Page({ params }: PageProps) {
-  const page = await load(params);
-  if (!page) notFound();
-
-  const { detail, similar } = page;
-  const year = detail.releaseDate?.slice(0, 4);
-  // Both no-op when signed out — login is optional.
-  const [signedIn, startAt] = await Promise.all([
-    isSignedIn(),
-    getResumePosition({ tmdbId: detail.id, mediaType: "movie" }),
-  ]);
-
-  return (
-    <WatchView
-      target={{ tmdbId: detail.id, mediaType: "movie" }}
-      title={detail.title}
-      subtitle={[year, detail.genres.slice(0, 3).join(", ")]
-        .filter(Boolean)
-        .join(" · ")}
-      overview={detail.overview}
-      detailHref={`/movie/${detail.id}`}
-      similar={similar}
-      signedIn={signedIn}
-      startAt={startAt}
-    />
-  );
+  const { id } = await params;
+  return <MovieWatchScreen tmdbId={id} detailPath={`/movie/${id}`} />;
 }

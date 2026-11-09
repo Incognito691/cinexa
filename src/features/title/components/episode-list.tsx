@@ -8,9 +8,9 @@ import { useState } from "react";
 import { AiringTime } from "@/components/airing-time";
 import { tmdbImage } from "@/lib/env";
 import { cn } from "@/lib/utils";
-import type { NextAiring, TvEpisode } from "@/types/media";
+import type { TvEpisode } from "@/types/media";
 
-import { airingSchedule, type EpisodeAiring } from "../lib/airing";
+import type { EpisodeAiring, EpisodeCut } from "../lib/airing";
 import { formatDate, formatRuntime } from "./parts";
 
 /** Episodes shown before the rest collapse behind "Show more". */
@@ -26,19 +26,22 @@ const EPISODE_LIMIT = 3;
  * missing the state just updates immediately.
  */
 export function EpisodeList({
-  episodes,
-  titleId,
-  nextAiring,
+  cut,
+  watchPath,
 }: {
-  episodes: TvEpisode[];
-  titleId: number;
-  nextAiring?: NextAiring | null;
+  /**
+   * Aired episodes plus only the next one. Computed by the server and passed
+   * in, never here: it depends on the current time, and server and browser
+   * computing it separately is a hydration mismatch.
+   */
+  cut: EpisodeCut;
+  /** e.g. `/watch/tv/73223` or `/anime/195604/black-clover-season-2/watch`. */
+  watchPath: string;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const schedule = airingSchedule(episodes, nextAiring);
 
-  const visible = expanded ? episodes : episodes.slice(0, EPISODE_LIMIT);
-  const hidden = episodes.length - visible.length;
+  const visible = expanded ? cut.visible : cut.visible.slice(0, EPISODE_LIMIT);
+  const hidden = cut.visible.length - visible.length;
 
   const toggle = () => {
     const update = () => setExpanded((v) => !v);
@@ -56,8 +59,8 @@ export function EpisodeList({
           <EpisodeCard
             key={episode.id}
             episode={episode}
-            titleId={titleId}
-            airing={schedule.get(episode.id)}
+            watchPath={watchPath}
+            airing={episode.id === cut.nextId ? (cut.airing ?? undefined) : undefined}
           />
         ))}
       </ol>
@@ -87,12 +90,12 @@ export function EpisodeList({
 
 function EpisodeCard({
   episode,
-  titleId,
+  watchPath,
   airing,
 }: {
   episode: TvEpisode;
-  titleId: number;
-  /** Set only for episodes that haven't aired yet. */
+  watchPath: string;
+  /** Set only on the next, not-yet-aired episode. */
   airing?: EpisodeAiring;
 }) {
   const still = episode.stillPath ? tmdbImage(episode.stillPath, "w300") : null;
@@ -108,9 +111,13 @@ function EpisodeCard({
       style={{ viewTransitionName: `ep-${episode.id}` }}
       className="vt-episode"
     >
-      <Link
-        href={`/watch/tv/${titleId}?season=${episode.seasonNumber}&episode=${episode.episodeNumber}`}
-        className="group flex gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]"
+      <Row
+        // The next episode hasn't aired, so there's nothing to play yet.
+        href={
+          airing
+            ? undefined
+            : `${watchPath}?season=${episode.seasonNumber}&episode=${episode.episodeNumber}`
+        }
       >
         <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-xl bg-white/[0.05] sm:w-44">
           {still ? (
@@ -124,9 +131,11 @@ function EpisodeCard({
               className="object-cover"
             />
           ) : null}
-          <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-            <Play className="h-6 w-6 fill-white text-white" />
-          </span>
+          {airing ? null : (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              <Play className="h-6 w-6 fill-white text-white" />
+            </span>
+          )}
         </div>
 
         <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
@@ -154,7 +163,7 @@ function EpisodeCard({
             {airing ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-medium text-white/85">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                {airing.estimated ? "Estimated" : "Airs"} <AiringTime at={airing.at} mode={airing.mode} />
+                Airs <AiringTime at={airing.at} mode={airing.mode} />
               </span>
             ) : null}
           </p>
@@ -165,7 +174,22 @@ function EpisodeCard({
             </p>
           ) : null}
         </div>
-      </Link>
+      </Row>
     </li>
+  );
+}
+
+/** A playable episode is a link; the not-yet-aired one is a plain card. */
+function Row({ href, children }: { href?: string; children: React.ReactNode }) {
+  const base = "group flex gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3";
+  return href ? (
+    <Link
+      href={href}
+      className={cn(base, "transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]")}
+    >
+      {children}
+    </Link>
+  ) : (
+    <div className={cn(base, "border-dashed")}>{children}</div>
   );
 }

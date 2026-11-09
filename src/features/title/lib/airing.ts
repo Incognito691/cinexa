@@ -1,33 +1,37 @@
-import type { NextAiring, TvEpisode } from "@/types/media";
+import type { EpisodeAiring, NextAiring, TvEpisode } from "@/types/media";
 
-export interface EpisodeAiring {
-  /** Unix seconds. */
-  at: number;
-  /** "time": exact air time; "date": a UTC calendar day only. */
-  mode: "time" | "date";
-  /** Projected from the next episode, not reported for this one. */
-  estimated: boolean;
+export type { EpisodeAiring };
+
+export interface EpisodeCut {
+  /** Everything aired, plus the single next episode. */
+  visible: TvEpisode[];
+  /** The next episode, if one is still to air. */
+  nextId: number | null;
+  /** When it airs, if known. */
+  airing: EpisodeAiring | null;
 }
 
 const DAY = 86_400;
-const WEEK = 7 * DAY;
 
 /**
- * When each upcoming episode airs.
+ * Which episodes to list, and when the next one airs.
+ *
+ * TMDB lists episodes well before they exist, as "Episode 9" with no still
+ * and no overview, so only the next unaired one is shown. Once it airs the
+ * following one takes its place, which keeps the list honest without
+ * guessing a release cadence.
  *
  * TMDB only knows the day. When AniList's exact `nextAiring` is available
- * (anime), it's matched to the TMDB episode airing within a day of it, which
- * is safer than trusting episode numbers, since AniList numbers a split
- * season's second part from 1. Later episodes are projected a week apart,
- * the usual simulcast cadence, and flagged as estimates. Everything else
- * upcoming falls back to TMDB's date.
+ * (anime), it's matched to the TMDB episode airing within a day of it, by
+ * date rather than number, since AniList renumbers a split season's second
+ * part from 1. That match also decides what counts as aired, so an episode
+ * isn't kept as "today" after AniList has already moved past it.
  */
-export function airingSchedule(
+export function cutAtNextEpisode(
   episodes: TvEpisode[],
   nextAiring: NextAiring | null | undefined,
   now = Date.now() / 1000,
-): Map<number, EpisodeAiring> {
-  const out = new Map<number, EpisodeAiring>();
+): EpisodeCut {
   const dayOf = (e: TvEpisode) => (e.airDate ? Date.parse(`${e.airDate}T00:00:00Z`) / 1000 : null);
 
   const anchor = nextAiring
@@ -37,14 +41,27 @@ export function airingSchedule(
       })
     : undefined;
 
-  for (const e of episodes) {
+  const unaired = (e: TvEpisode) => {
+    if (anchor) return e.episodeNumber >= anchor.episodeNumber;
     const day = dayOf(e);
-    if (anchor && nextAiring && e.episodeNumber >= anchor.episodeNumber) {
-      const steps = e.episodeNumber - anchor.episodeNumber;
-      out.set(e.id, { at: nextAiring.airingAt + steps * WEEK, mode: "time", estimated: steps > 0 });
-    } else if (day !== null && day + DAY > now) {
-      out.set(e.id, { at: day, mode: "date", estimated: false });
-    }
-  }
-  return out;
+    // No date at all means TMDB has a placeholder for it.
+    return day === null || day + DAY > now;
+  };
+
+  const next = episodes.find(unaired);
+  if (!next) return { visible: episodes, nextId: null, airing: null };
+
+  const day = dayOf(next);
+  const airing: EpisodeAiring | null =
+    anchor && nextAiring && next.id === anchor.id
+      ? { at: nextAiring.airingAt, mode: "time" }
+      : day !== null
+        ? { at: day, mode: "date" }
+        : null;
+
+  return {
+    visible: episodes.filter((e) => !unaired(e) || e.id === next.id),
+    nextId: next.id,
+    airing,
+  };
 }

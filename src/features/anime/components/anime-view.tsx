@@ -1,22 +1,34 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarClock, Play, Star } from "lucide-react";
+import type { ComponentProps } from "react";
+import { CalendarClock, History, Play, Star } from "lucide-react";
 
 import { AiringTime } from "@/components/airing-time";
 import { Button } from "@/components/ui/button";
+import { ContinueCard } from "@/features/continue-watching";
 import { animeHref } from "@/lib/anime-slug";
 import type { AnimeHome, AnimeItem } from "@/types/anime";
 
 import { AnimeCard, formatLabel, stars } from "./anime-card";
 
-/** The `/anime` page: hero, airing schedule, then the rails. */
-export function AnimeView({ data }: { data: AnimeHome }) {
+type ContinueCardData = ComponentProps<typeof ContinueCard>["card"];
+
+/** The `/anime` page: hero, the viewer's anime in progress, airing schedule, then the rails. */
+export function AnimeView({
+  data,
+  continueCards = [],
+}: {
+  data: AnimeHome;
+  /** Signed-in viewer's anime in progress; empty hides the row. */
+  continueCards?: ContinueCardData[];
+}) {
   // The #1 trending title often has no banner yet; take the first that does.
   const hero = data.trending.find((i) => i.banner) ?? data.trending[0];
 
   return (
     <div className="mx-auto w-full max-w-[1560px] space-y-12 pb-16 pt-2">
       {hero ? <Hero item={hero} /> : null}
+      {continueCards.length ? <ContinueRow cards={continueCards} /> : null}
       {data.airing.length ? <AiringNext items={data.airing.slice(0, 8)} /> : null}
       <Rail title={`This season · ${data.seasonLabel}`} items={data.season} />
       <Rail title="Trending now" items={data.trending} />
@@ -95,6 +107,21 @@ function Hero({ item }: { item: AnimeItem }) {
             </Link>
           </Button>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function ContinueRow({ cards }: { cards: ContinueCardData[] }) {
+  return (
+    <section className="space-y-5">
+      <SectionTitle icon={<History className="h-5 w-5 text-primary" aria-hidden />}>
+        Continue watching
+      </SectionTitle>
+      <div className="-mt-3 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3 pt-3 scrollbar-hide">
+        {cards.map((card) => (
+          <ContinueCard key={card.key} card={card} className="w-[300px] shrink-0 snap-start sm:w-[340px]" />
+        ))}
       </div>
     </section>
   );

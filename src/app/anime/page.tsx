@@ -1,9 +1,34 @@
 import { AnimeView } from "@/features/anime";
+import { loadContinueCards } from "@/features/continue-watching/lib/entries";
 import { buildMetadata } from "@/lib/metadata";
 import { fetchAnimeHome } from "@/server/anilist/home";
+import { animeHref } from "@/lib/anime-slug";
+import { anilistIdFor, animeTmdbKeys } from "@/server/anilist/resolve";
+import { isSignedIn } from "@/server/watch-history";
 
-// Matches the AniList query's own cache window.
-export const revalidate = 1800;
+// No page-level `revalidate`: the continue row reads the session, so the page
+// is per-request. The AniList query still caches itself for 30 minutes.
+
+/**
+ * The viewer's anime in progress. Signed out it's an empty list before the
+ * anime cross-reference is ever loaded, so anonymous visits don't pay for it.
+ */
+async function animeInProgress() {
+  if (!(await isSignedIn())) return [];
+  const anime = await animeTmdbKeys();
+  const cards = await loadContinueCards(8, (e) => anime.has(`${e.mediaType}:${e.tmdbId}`));
+
+  // Resume inside the anime section: `/anime/:id/:slug/watch?season=&episode=`
+  // rather than the card's default `/watch/tv/...`.
+  return Promise.all(
+    cards.map(async (card) => {
+      const query = card.href.includes("?") ? card.href.slice(card.href.indexOf("?")) : "";
+      const season = Number(new URLSearchParams(query).get("season")) || undefined;
+      const anilistId = await anilistIdFor({ tmdbId: card.tmdbId, mediaType: card.mediaType, season });
+      return anilistId ? { ...card, href: `${animeHref(anilistId, card.title)}/watch${query}` } : card;
+    }),
+  );
+}
 
 export const metadata = buildMetadata({
   title: "Anime",
@@ -13,7 +38,10 @@ export const metadata = buildMetadata({
 });
 
 export default async function AnimePage() {
-  const data = await fetchAnimeHome().catch(() => null);
+  const [data, continueCards] = await Promise.all([
+    fetchAnimeHome().catch(() => null),
+    animeInProgress().catch(() => []),
+  ]);
 
   if (!data) {
     return (
@@ -26,5 +54,5 @@ export default async function AnimePage() {
     );
   }
 
-  return <AnimeView data={data} />;
+  return <AnimeView data={data} continueCards={continueCards} />;
 }

@@ -49,11 +49,12 @@ export function MediaCard({
   const isGrid = layout === "grid";
 
   const detailHref =
-    item.mediaType === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
+    item.href ?? (item.mediaType === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`);
   const watchHref =
-    item.mediaType === "movie"
+    item.watchHref ??
+    (item.mediaType === "movie"
       ? `/watch/movie/${item.id}`
-      : `/watch/tv/${item.id}?season=1&episode=1`;
+      : `/watch/tv/${item.id}?season=1&episode=1`);
 
   const poster = item.posterPath
     ? tmdbImage(item.posterPath, POSTER_SIZE)

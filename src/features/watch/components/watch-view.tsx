@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Check, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { MediaCardItem, TvEpisode, TvSeasonSummary } from "@/types/media";
+import { AiringTime } from "@/components/airing-time";
+import type { MediaCardItem, TvEpisode, TvSeasonSummary, UpcomingEpisode } from "@/types/media";
 
 import type { PlaybackTarget } from "../lib/sources";
 import { EpisodeNav } from "./episode-nav";
@@ -20,9 +21,17 @@ interface WatchViewProps {
   overview?: string;
   /** Where the "details" link goes. */
   detailHref: string;
+  /**
+   * Base URL episodes play at; `?season=&episode=` is appended. Defaults to
+   * `/watch/tv/:id`. Anime passes `/anime/:id/:slug/watch` so it never
+   * leaves its own section.
+   */
+  watchPath?: string;
   similar: MediaCardItem[];
   /** TV only — powers the episode strip and the header nav. */
   episodes?: TvEpisode[];
+  /** The next, not-yet-aired episode: listed, but not playable. */
+  upcoming?: UpcomingEpisode | null;
   currentEpisode?: number;
   seasons?: TvSeasonSummary[];
   /** `s{n}e{n}` keys the signed-in user has already watched. */
@@ -44,8 +53,10 @@ export function WatchView({
   subtitle,
   overview,
   detailHref,
+  watchPath,
   similar,
   episodes,
+  upcoming,
   currentEpisode,
   seasons,
   watchedKeys = [],
@@ -56,8 +67,14 @@ export function WatchView({
   const isTv = target.mediaType === "tv";
   const season = target.season ?? 1;
 
+  const playPath = watchPath ?? `/watch/tv/${target.tmdbId}`;
   const episodeHref = (episodeNumber: number) =>
-    `/watch/tv/${target.tmdbId}?season=${target.season ?? 1}&episode=${episodeNumber}`;
+    `${playPath}?season=${target.season ?? 1}&episode=${episodeNumber}`;
+
+  // The next aired episode in this season, for the anime player's auto-next.
+  const index = episodes?.findIndex((e) => e.episodeNumber === currentEpisode) ?? -1;
+  const next = index >= 0 ? episodes?.[index + 1] : undefined;
+  const nextHref = next ? episodeHref(next.episodeNumber) : undefined;
 
   return (
     <div
@@ -80,8 +97,10 @@ export function WatchView({
           {isTv && seasons && episodes ? (
             <EpisodeNav
               tmdbId={target.tmdbId}
+              watchPath={playPath}
               seasons={seasons}
               episodes={episodes}
+              upcoming={upcoming}
               season={season}
               episode={currentEpisode ?? 1}
               watchedKeys={watchedKeys}
@@ -123,7 +142,7 @@ export function WatchView({
         dwellFallback={!isTv}
       />
 
-      <WatchPlayer target={target} title={title} startAt={startAt} />
+      <WatchPlayer target={target} title={title} startAt={startAt} nextHref={nextHref} />
 
       <div className="mx-auto max-w-[1400px] space-y-10 px-4 sm:px-6">
         {isTv ? (
@@ -174,6 +193,21 @@ export function WatchView({
                   </li>
                 );
               })}
+              {upcoming ? (
+                <li
+                  className="flex items-center gap-2 rounded-lg border border-dashed border-white/[0.12] px-3 py-2 text-xs text-white/45"
+                  title={upcoming.name}
+                >
+                  <span className="font-medium text-white/60">{upcoming.episodeNumber}</span>
+                  {upcoming.airing ? (
+                    <span>
+                      Airs <AiringTime at={upcoming.airing.at} mode={upcoming.airing.mode} />
+                    </span>
+                  ) : (
+                    <span>Coming soon</span>
+                  )}
+                </li>
+              ) : null}
             </ul>
           </section>
         ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Maximize, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { usePersistedString } from "@/hooks/use-persisted-string";
@@ -11,6 +12,7 @@ import {
   SOURCES,
   SOURCE_IDS,
   SOURCE_PREFERENCE_KEY,
+  ZOKO_ORIGIN,
   getSource,
   type PlaybackTarget,
 } from "../lib/sources";
@@ -22,6 +24,8 @@ interface WatchPlayerProps {
   title: string;
   /** Seconds to resume at. Only providers that support it act on this. */
   startAt?: number;
+  /** Where to go when the anime player finishes an episode with auto-next on. */
+  nextHref?: string;
   children?: React.ReactNode;
 }
 
@@ -42,8 +46,10 @@ export function WatchPlayer({
   target,
   title,
   startAt,
+  nextHref,
   children,
 }: WatchPlayerProps) {
+  const router = useRouter();
   // The settings page owns the default. The player follows it — including
   // across the hook's post-mount hydration — until the user picks a source
   // here, after which their pick wins for this page only. Switching provider
@@ -54,8 +60,14 @@ export function WatchPlayer({
     SOURCE_IDS,
   );
   const [picked, setPicked] = useState<string | null>(null);
-  const sourceId = picked ?? preferred;
+  // Anime opens on the anime player; everything else on the saved default.
+  // Anime-only sources aren't offered for anything else.
+  const sources = SOURCES.filter((s) => !s.animeOnly || target.anime);
+  const sourceId = picked ?? (target.anime ? "zoko" : preferred);
   const setSourceId = setPicked;
+  // Set once the anime player has moved us on to the next episode, so the
+  // next one starts by itself (a cold start would begin muted).
+  const [autoAdvanced, setAutoAdvanced] = useState(false);
 
   const [loaded, setLoaded] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -64,7 +76,8 @@ export function WatchPlayer({
   const shellRef = useRef<HTMLDivElement>(null);
 
   const source = getSource(sourceId);
-  const src = source.build(target, startAt);
+  const src = source.build(target, startAt, { autoplay: autoAdvanced });
+  const isZoko = source.id === "zoko";
 
   // Reset load state whenever the stream changes — a new episode or source is
   // a fresh load, and the old "ready" state would hide the spinner wrongly.
@@ -74,6 +87,53 @@ export function WatchPlayer({
     const timer = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [src]);
+
+  /*
+   * The anime player's message protocol (every message has
+   * `channel: "zokoanime"`):
+   *  - `ready`: seek to the saved position (resume) and report fullscreen.
+   *  - `ended` with `auto_next`: navigate to the next episode ourselves; the
+   *    player never changes episodes on its own.
+   *  - `fullscreen` requests: fullscreen *our* wrapper instead of the iframe,
+   *    so fullscreen survives the iframe's src changing to the next episode.
+   * Position updates are read by WatchTracker for Continue Watching.
+   */
+  useEffect(() => {
+    if (!isZoko) return;
+    const send = (msg: Record<string, unknown>) =>
+      frameRef.current?.contentWindow?.postMessage({ channel: "zokoanime", ...msg }, ZOKO_ORIGIN);
+    const tell = () =>
+      send({ type: "fullscreen", active: document.fullscreenElement === shellRef.current });
+
+    let resumed = false;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== ZOKO_ORIGIN) return;
+      const msg = event.data as { channel?: string; type?: string; request?: string; auto_next?: boolean };
+      if (msg?.channel !== "zokoanime") return;
+
+      if (msg.type === "ready") {
+        tell();
+        if (startAt && startAt > 0 && !resumed) {
+          resumed = true;
+          send({ type: "seek", time: Math.floor(startAt) });
+        }
+      } else if (msg.type === "fullscreen" && msg.request === "enter") {
+        shellRef.current?.requestFullscreen?.().then(tell, tell);
+      } else if (msg.type === "fullscreen" && msg.request === "exit") {
+        document.exitFullscreen?.().then(tell, tell);
+      } else if (msg.type === "ended" && msg.auto_next && nextHref) {
+        setAutoAdvanced(true);
+        router.push(nextHref);
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    document.addEventListener("fullscreenchange", tell);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      document.removeEventListener("fullscreenchange", tell);
+    };
+  }, [isZoko, src, startAt, nextHref, router]);
 
   const enterFullscreen = () => {
     // Fullscreen the wrapper, not the iframe: the iframe keeps playing and the
@@ -142,7 +202,7 @@ export function WatchPlayer({
           <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
             Source
           </span>
-          {SOURCES.map((s) => (
+          {sources.map((s) => (
             <button
               key={s.id}
               type="button"

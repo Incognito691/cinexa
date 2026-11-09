@@ -1,18 +1,19 @@
 import Link from "next/link";
-import { Clapperboard, Tv, type LucideIcon } from "lucide-react";
+import { ArrowRight, Clapperboard, Tv, type LucideIcon } from "lucide-react";
 
 import { buildExploreHref } from "../lib/presets";
 
 interface TypeTile {
   tab: "movies" | "tv";
   label: string;
+  blurb: string;
   Icon: LucideIcon;
   gradient: string;
 }
 
 const TYPES: readonly TypeTile[] = [
-  { tab: "movies", label: "Movies", Icon: Clapperboard, gradient: "from-rose-500/40 via-red-500/30 to-orange-500/20" },
-  { tab: "tv", label: "TV Shows", Icon: Tv, gradient: "from-sky-500/40 via-blue-500/30 to-indigo-500/20" },
+  { tab: "movies", label: "Movies", blurb: "Films from every genre and decade", Icon: Clapperboard, gradient: "from-rose-500/40 via-red-500/30 to-orange-500/20" },
+  { tab: "tv", label: "TV Shows", blurb: "Series to binge, new and classic", Icon: Tv, gradient: "from-sky-500/40 via-blue-500/30 to-indigo-500/20" },
 ] as const;
 
 /**
@@ -31,21 +32,28 @@ export function BrowseByType() {
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {TYPES.map(({ tab, label, Icon, gradient }) => (
+        {/* Short banners rather than 2:1 cards: at two per row a 2:1 card
+            was ~330px tall and pushed the section off the first screen. */}
+        {TYPES.map(({ tab, label, blurb, Icon, gradient }) => (
           <Link
             key={tab}
             href={buildExploreHref({ tab, sort_by: "popularity.desc", page: 1 })}
             aria-label={`Browse ${label}`}
-            className="group relative aspect-[16/9] overflow-hidden rounded-2xl border border-white/[0.08] shadow-md shadow-black/40 transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.18] hover:shadow-xl sm:aspect-[2/1]"
+            className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-2xl border border-white/[0.08] px-4 shadow-md shadow-black/40 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/[0.18] hover:shadow-xl sm:h-28 sm:px-6"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} aria-hidden />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" aria-hidden />
-            <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center opacity-30 transition-opacity duration-300 group-hover:opacity-60">
-              <Icon className="h-10 w-10 text-white" strokeWidth={1.25} />
-            </div>
-            <div className="absolute inset-x-0 bottom-0 px-3 pb-3 pt-10">
-              <p className="text-base font-semibold text-white">{label}</p>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" aria-hidden />
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 sm:h-12 sm:w-12">
+              <Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" strokeWidth={1.5} />
+            </span>
+            <span className="relative min-w-0 flex-1">
+              <span className="block text-base font-semibold text-white sm:text-lg">{label}</span>
+              <span className="hidden truncate text-xs text-white/60 sm:block">{blurb}</span>
+            </span>
+            <ArrowRight
+              className="relative h-5 w-5 shrink-0 text-white/50 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white"
+              aria-hidden
+            />
           </Link>
         ))}
       </div>

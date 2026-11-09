@@ -5,6 +5,7 @@ import { LibraryButton } from "@/features/library";
 import { cn } from "@/lib/utils";
 import type { NextAiring, TvPage } from "@/types/media";
 
+import { cutAtNextEpisode } from "../lib/airing";
 import { EpisodeList } from "./episode-list";
 import {
   CastRail,
@@ -35,10 +36,13 @@ export function TvDetailView({
   selectedSeason,
   episodes,
   basePath,
+  watchPath,
   nextAiring,
 }: TvPage & {
   /** Where season links point. `/anime/:id/:slug` keeps anime on its own URL. */
   basePath?: string;
+  /** Where episodes play. Anime passes `/anime/:id/:slug/watch`. */
+  watchPath?: string;
   /** Exact next air time (anime, from AniList); TMDB alone only has dates. */
   nextAiring?: NextAiring | null;
 }) {
@@ -65,7 +69,8 @@ export function TvDetailView({
 
   // Continue into the season the viewer is looking at, not always S1E1.
   const firstEpisode = episodes[0];
-  const watchHref = `/watch/tv/${detail.id}?season=${selectedSeason}&episode=${
+  const playPath = watchPath ?? `/watch/tv/${detail.id}`;
+  const watchHref = `${playPath}?season=${selectedSeason}&episode=${
     firstEpisode?.episodeNumber ?? 1
   }`;
 
@@ -126,7 +131,7 @@ export function TvDetailView({
             }
           >
             {episodes.length > 0 ? (
-              <EpisodeList episodes={episodes} titleId={detail.id} nextAiring={nextAiring} />
+              <EpisodeList cut={cutAtNextEpisode(episodes, nextAiring)} watchPath={playPath} />
             ) : (
               <p className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-5 py-8 text-center text-sm text-white/50">
                 No episode details available for this season yet.

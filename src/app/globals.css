@@ -355,6 +355,33 @@
     height: 1px;
   }
 
+  /* Horizontal rails: no track, no border, and the thumb only shows while
+     hovering. Chrome/Firefox use the standard properties (and then ignore the
+     ::-webkit ones); Safari uses the ::-webkit ones. The mask fades the right
+     edge so a cut-off card reads as "more this way". */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    mask-image: linear-gradient(to right, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, black 90%, transparent);
+  }
+  .scroll-slim:hover {
+    scrollbar-color: rgb(255 255 255 / 0.22) transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    height: 6px;
+  }
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+  }
+  .scroll-slim:hover::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.22);
+  }
+
   /* Surprise page: the landed pick pops in, and wall tiles flash while the
      deck is shuffling. */
   @keyframes pick-pop {

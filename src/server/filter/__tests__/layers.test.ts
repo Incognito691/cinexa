@@ -58,6 +58,18 @@ describe("layer 4 — keyword blacklist", () => {
     const r = layer4Keywords(input({ keywords: ["heist", "courtroom"] }));
     expect(r.decision).toBe("PASS");
   });
+
+  it("doesn't block mainstream titles about hunters", () => {
+    // Cowboy Bebop was blocked as PORNOGRAPHIC by a bare "hunters" entry.
+    const r = layer4Keywords(
+      input({
+        title: "Cowboy Bebop",
+        overview: "In 2071, a ragtag crew of bounty hunters roams the solar system.",
+        keywords: ["bounty hunter", "space western"],
+      }),
+    );
+    expect(r.decision).toBe("PASS");
+  });
 });
 
 describe("layer 5 — text analysis", () => {

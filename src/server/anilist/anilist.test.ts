@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { currentSeason, stripHtml } from "./home";
-import { buildMap, splitSeason } from "./resolve";
+import { absoluteEpisode, buildMap, locateInParts, splitSeason } from "./resolve";
 
 describe("splitSeason", () => {
   it("splits the season number off the title", () => {
@@ -33,5 +33,28 @@ describe("home helpers", () => {
 
   it("strips AniList's HTML", () => {
     expect(stripHtml("A <i>boy</i>.<br><br>He&#039;s &quot;here&quot;.")).toBe(`A boy. He's "here".`);
+  });
+});
+
+describe("anime episode mapping", () => {
+  it("finds the part of a split season an episode falls in", () => {
+    const parts = [
+      { malId: 1, episodes: 12 },
+      { malId: 2, episodes: null }, // second cour, still airing
+    ];
+    expect(locateInParts(parts, 5)).toEqual({ malId: 1, episode: 5 });
+    expect(locateInParts(parts, 12)).toEqual({ malId: 1, episode: 12 });
+    expect(locateInParts(parts, 13)).toEqual({ malId: 2, episode: 1 });
+    expect(locateInParts([{ malId: 1, episodes: 12 }], 13)).toBeNull();
+  });
+
+  it("counts absolute episodes across seasons, ignoring specials", () => {
+    const seasons = [
+      { seasonNumber: 0, episodeCount: 5 },
+      { seasonNumber: 1, episodeCount: 61 },
+      { seasonNumber: 2, episodeCount: 16 },
+    ];
+    expect(absoluteEpisode(seasons, 1, 3)).toBe(3);
+    expect(absoluteEpisode(seasons, 3, 2)).toBe(79);
   });
 });

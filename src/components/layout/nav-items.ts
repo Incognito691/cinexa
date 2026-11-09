@@ -8,7 +8,7 @@ import {
   PlayCircle,
   Settings,
   Shuffle,
-  Sparkles,
+  Swords,
   Library,
   type LucideIcon,
 } from "lucide-react";
@@ -25,7 +25,7 @@ export const primaryNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home },
   { label: "Explore", href: "/explore", icon: Compass },
   { label: "Surprise", href: "/surprise", icon: Shuffle },
-  { label: "Anime", href: "/anime", icon: Sparkles },
+  { label: "Anime", href: "/anime", icon: Swords },
 ];
 
 export const libraryNav: NavItem[] = [
