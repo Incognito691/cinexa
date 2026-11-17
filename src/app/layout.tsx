@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 /**
  * Root metadata. `metadataBase` makes every relative OG/canonical URL in a
  * child page resolve to an absolute one, and the title template means pages
- * only declare their own title ("Explore" renders as "Explore · Cinexa").
+ * only declare their own title ("Explore" renders as "Explore · Popcornly").
  */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

@@ -22,7 +22,7 @@ import { buildMetadata } from "@/lib/metadata";
 export const revalidate = 60;
 
 // No `title` — the home page uses the root default rather than the
-// "%s · Cinexa" template, so it reads as the brand landing page.
+// "%s · Popcornly" template, so it reads as the brand landing page.
 export const metadata = buildMetadata({ path: "/" });
 
 type RailData = {

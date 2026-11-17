@@ -11,7 +11,7 @@ import type { TitleDetail } from "@/types/media";
  * URLs, Open Graph, and Twitter cards stay consistent as pages are added.
  */
 
-export const SITE_NAME = "Cinexa";
+export const SITE_NAME = "Popcornly";
 
 /** Used verbatim as the root <title> and as the OG title on untitled pages. */
 export const SITE_TITLE = `${SITE_NAME} — Premium Movie & TV Streaming`;
@@ -144,7 +144,7 @@ export function buildTitleMetadata(detail: TitleDetail): Metadata {
 
   return buildMetadata({
     // The year disambiguates remakes, which otherwise produce two identical
-    // <title>s ("Dune · Cinexa" twice).
+    // <title>s ("Dune · Popcornly" twice).
     title: year ? `${detail.title} (${year})` : detail.title,
     description,
     path: `/${detail.mediaType}/${detail.id}`,

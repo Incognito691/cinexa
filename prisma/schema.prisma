@@ -1,4 +1,4 @@
-// Cinexa database schema.
+// Popcornly database schema.
 //
 // The auth models are the shapes @auth/prisma-adapter expects — renaming or
 // dropping fields here breaks the adapter, so treat them as fixed.

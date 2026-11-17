@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project: Cinexa
+## Project: Popcornly
 
 A movie/TV streaming UI built with Next.js 15 (App Router) + React 19 + Tailwind + shadcn/ui. Metadata from TMDB; playback via SuperEmbed and WebTorrent + YTS. The codebase is split into a server-rendered Next.js app and a client UI that fetches data through App-Router route handlers, with a strong content-filter pipeline sitting between TMDB and the user.
 
@@ -114,7 +114,7 @@ All API responses share `ApiResponse<T> = ApiSuccess<T> | ApiError`. List endpoi
 
 ### Metadata / SEO
 
-`lib/metadata.ts` is the single entry point. `layout.tsx` sets `metadataBase` and the `%s · Cinexa` title template; pages call `buildMetadata({ title, description, path, images, noIndex })` and declare only what's theirs. Detail pages should call it from `generateMetadata` and pass a TMDB backdrop as `images`.
+`lib/metadata.ts` is the single entry point. `layout.tsx` sets `metadataBase` and the `%s · Popcornly` title template; pages call `buildMetadata({ title, description, path, images, noIndex })` and declare only what's theirs. Detail pages should call it from `generateMetadata` and pass a TMDB backdrop as `images`.
 
 `app/icon.tsx` and `app/opengraph-image.tsx` are **generated** with `next/og`, not committed binaries — there is no `public/` directory. `NEXT_PUBLIC_SITE_URL` must be set in production or every canonical and share URL points at localhost. `/explore` is `noIndex` and disallowed in `robots.ts`, because each filter combination is its own URL.
 

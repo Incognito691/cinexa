@@ -10,7 +10,7 @@ import { PageTransition } from "./page-transition";
 import { AppTopbar } from "./app-topbar";
 import { usePersistedFlag } from "@/hooks/use-persisted-flag";
 
-const SIDEBAR_KEY = "cinexa:sidebar-expanded";
+const SIDEBAR_KEY = "popcornly:sidebar-expanded";
 const EXPANDED_W = "248px";
 const COLLAPSED_W = "68px";
 

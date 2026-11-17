@@ -53,7 +53,7 @@ export default function OpengraphImage() {
               display: "flex",
             }}
           >
-            cine<span style={{ color: "#e50914" }}>x</span>a
+            popcorn<span style={{ color: "#e50914" }}>ly</span>
           </div>
         </div>
 
