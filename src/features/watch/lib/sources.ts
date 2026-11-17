@@ -131,7 +131,7 @@ export function getSource(id: string): PlaybackSource {
  * Shared between the settings page (which writes it) and the player (which
  * starts on it), so the two can't drift onto different keys.
  */
-export const SOURCE_PREFERENCE_KEY = "cinexa:default-source";
+export const SOURCE_PREFERENCE_KEY = "popcornly:default-source";
 
 /** Choosable as the site-wide default: anime-only sources can't play the rest. */
 export const SOURCE_IDS: readonly string[] = SOURCES.filter((s) => !s.animeOnly).map((s) => s.id);

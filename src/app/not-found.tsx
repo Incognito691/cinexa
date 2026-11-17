@@ -6,7 +6,7 @@ import { buildMetadata } from "@/lib/metadata";
 // indexable — a soft-404 that search engines will happily list.
 export const metadata = buildMetadata({
   title: "Not found",
-  description: "That page or title isn’t available on Cinexa.",
+  description: "That page or title isn’t available on Popcornly.",
   noIndex: true,
 });
 

@@ -102,7 +102,7 @@ export function SiteFooter() {
       </div>
 
       <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-white/[0.06] pt-6 text-xs text-white/45 sm:flex-row sm:items-center">
-        <p>© {new Date().getFullYear()} Cinexa. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Popcornly. All rights reserved.</p>
       </div>
     </footer>
   );

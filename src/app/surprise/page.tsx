@@ -10,7 +10,7 @@ export const revalidate = 600;
 // Random by design: nothing here is worth a search result.
 export const metadata = buildMetadata({
   title: "Surprise",
-  description: "Can't decide? Pick a genre and let Cinexa choose a movie or show for you.",
+  description: "Can't decide? Pick a genre and let Popcornly choose a movie or show for you.",
   path: "/surprise",
   noIndex: true,
 });

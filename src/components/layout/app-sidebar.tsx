@@ -186,7 +186,7 @@ export function SidebarContent({
       >
         <Link
           href="/"
-          aria-label="Cinexa home"
+          aria-label="Popcornly home"
           onClick={onNavigate}
           className={cn(
             "flex items-center gap-2.5 rounded-lg",

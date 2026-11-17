@@ -1,4 +1,4 @@
-# Cinexa
+# Popcornly
 
 A modern movie and TV streaming UI built with Next.js 15, React 19, Tailwind CSS, and shadcn/ui. Movie and TV data comes from TMDB; playback uses SuperEmbed (TV / iOS fallback), WebTorrent + YTS (movies).
 
