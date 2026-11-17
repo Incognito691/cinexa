@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -82,6 +83,9 @@ export default function RootLayout({
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>
+        {/* Vercel Web Analytics: page views per route, no cookies. Only
+            reports on Vercel deployments; a no-op in local dev. */}
+        <Analytics />
       </body>
     </html>
   );
