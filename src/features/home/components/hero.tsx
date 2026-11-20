@@ -61,7 +61,7 @@ export function Hero({ className, initialTrending = [] }: HeroProps) {
   return (
     <section
       className={cn(
-        "relative w-full overflow-hidden rounded-[28px]",
+        "relative w-full overflow-hidden rounded-2xl",
         "h-[72vh] min-h-[520px] max-h-[820px]",
         className,
       )}
@@ -105,13 +105,12 @@ export function Hero({ className, initialTrending = [] }: HeroProps) {
           className="reveal max-w-xl space-y-5 lg:max-w-2xl"
           style={{ animationDelay: "80ms" }}
         >
-          {/* Chips: rating + 4K + Atmos + year */}
+          {/* Chips: rating + year. Only facts we have. */}
           <div className="flex flex-wrap items-center gap-2">
             {isHydrating ? (
               <>
                 <span className="h-7 w-24 animate-pulse rounded-full bg-white/10" />
                 <span className="h-7 w-20 animate-pulse rounded-full bg-white/10" />
-                <span className="h-7 w-16 animate-pulse rounded-full bg-white/10" />
               </>
             ) : (
               <>
@@ -122,12 +121,6 @@ export function Hero({ className, initialTrending = [] }: HeroProps) {
                     <span className="text-white/40">/ 5</span>
                   </span>
                 ) : null}
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur-md">
-                  4K HDR
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/90 backdrop-blur-md">
-                  Dolby Atmos
-                </span>
                 {year ? (
                   <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs text-white/90 backdrop-blur-md">
                     {year}

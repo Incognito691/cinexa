@@ -2,19 +2,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-10 pb-20 pt-2" aria-busy>
+    <div className="mx-auto w-full max-w-5xl space-y-10 pb-20 pt-2" aria-busy>
       <span className="sr-only">Loading settings…</span>
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-40 rounded-lg" />
-        <Skeleton className="h-4 w-96 max-w-full rounded" />
-      </div>
-      {[2, 1, 2, 3].map((rows, i) => (
+      <Skeleton className="h-10 w-44 rounded-lg" />
+      <Skeleton className="h-28 rounded-2xl" />
+      {[0, 1].map((i) => (
         <div key={i} className="space-y-4">
-          <Skeleton className="h-4 w-28 rounded" />
-          <Skeleton
-            className="rounded-2xl"
-            style={{ height: `${rows * 68}px` }}
-          />
+          <Skeleton className="h-6 w-40 rounded" />
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[0, 1, 2].map((j) => (
+              <Skeleton key={j} className="h-36 rounded-2xl" />
+            ))}
+          </div>
         </div>
       ))}
     </div>

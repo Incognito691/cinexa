@@ -22,7 +22,7 @@ export function NowPlayingRail({ initial }: { initial: RailFeed }) {
     <MediaRail
       title="Now Playing"
       subtitle="Fresh in theatres and on streaming this week."
-      seeAllHref="/explore?tab=movies&category=now_playing"
+      seeAllHref="/movies/all?category=now_playing"
       items={initial.items}
       error={initial.error ? { message: initial.error } : null}
     />
@@ -34,7 +34,7 @@ export function TopMoviesRail({ initial }: { initial: RailFeed }) {
     <MediaRail
       title="Top Movies"
       subtitle="The films everyone's watching right now."
-      seeAllHref="/explore?tab=movies&category=popular"
+      seeAllHref="/movies/all"
       items={initial.items}
       error={initial.error ? { message: initial.error } : null}
     />
@@ -46,7 +46,7 @@ export function TopTvRail({ initial }: { initial: RailFeed }) {
     <MediaRail
       title="Top TV Shows"
       subtitle="Binge-worthy series lighting up the charts."
-      seeAllHref="/explore?tab=tv&category=popular"
+      seeAllHref="/tv-shows/all"
       items={initial.items}
       error={initial.error ? { message: initial.error } : null}
     />
@@ -58,7 +58,7 @@ export function TopHindiMoviesRail({ initial }: { initial: RailFeed }) {
     <MediaRail
       title="Top Hindi Movies"
       subtitle="Bollywood hits and original-language Hindi favourites."
-      seeAllHref="/explore?tab=movies&category=popular&language=hi"
+      seeAllHref="/movies/all?language=hi"
       items={initial.items}
       error={initial.error ? { message: initial.error } : null}
       language="Hindi"
@@ -71,7 +71,7 @@ export function TopHindiTvRail({ initial }: { initial: RailFeed }) {
     <MediaRail
       title="Top Hindi TV Shows"
       subtitle="Indian original-language Hindi series."
-      seeAllHref="/explore?tab=tv&category=popular&language=hi"
+      seeAllHref="/tv-shows/all?language=hi"
       items={initial.items}
       error={initial.error ? { message: initial.error } : null}
       language="Hindi"

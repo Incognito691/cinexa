@@ -1,11 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 
 import { cutAtNextEpisode } from "@/features/title";
+import { isUnreleased, isUnreleasedTitle } from "@/lib/release";
 import { animeEpisodeFor, asAnimeCards } from "@/server/anilist/resolve";
 import { fetchMoviePage, fetchTvPage } from "@/server/tmdb";
 import {
   getResumePosition,
-  getWatchedEpisodes,
+  getEpisodeProgress,
   isSignedIn,
 } from "@/server/watch-history";
 
@@ -57,21 +58,47 @@ export async function TvWatchScreen({
   const episode = requestedEpisode ?? episodes[0]?.episodeNumber ?? 1;
   const current = episodes.find((e) => e.episodeNumber === episode);
 
-  // The requested episode isn't in this season. That's what a "next episode"
-  // link looks like at a season boundary — roll into the next season if there
-  // is one, otherwise clamp, rather than embedding a player for an episode
-  // that doesn't exist.
-  if (!current && episodes.length > 0) {
-    const past = episode > episodes[episodes.length - 1].episodeNumber;
-    const nextSeason = seasons.find((s) => s.seasonNumber > selectedSeason);
-    if (past && nextSeason) {
+  // Seasons with something to play: TMDB also lists announced seasons with
+  // no episodes or a future premiere, and picking one of those opened a
+  // player for nothing. The season being viewed always stays listed.
+  const playable = seasons.filter(
+    (s) =>
+      s.seasonNumber === selectedSeason ||
+      (s.episodeCount > 0 && !isUnreleased(s.airDate) && (s.airDate !== null || s.seasonNumber === 0)),
+  );
+  // Prev/Next cross season boundaries, but never into specials (season 0).
+  const numbered = playable.filter((s) => s.seasonNumber >= 1);
+  const prevSeason = numbered.filter((s) => s.seasonNumber < selectedSeason).at(-1);
+  const nextSeason = numbered.find((s) => s.seasonNumber > selectedSeason);
+  const last = episodes.at(-1)?.episodeNumber;
+
+  // The requested episode isn't in this season. One past the end is what a
+  // "next episode" link looks like at a season boundary (Continue Watching
+  // builds those), so roll into the next season; anything else clamps,
+  // rather than embedding a player for an episode that doesn't exist.
+  if (!current && episodes.length > 0 && last !== undefined) {
+    const past = episode > last;
+    if (episode === last + 1 && nextSeason) {
       redirect(`${watchPath}?season=${nextSeason.seasonNumber}&episode=1`);
     }
-    const fallback = past
-      ? episodes[episodes.length - 1].episodeNumber
-      : episodes[0].episodeNumber;
+    const fallback = past ? last : episodes[0].episodeNumber;
     redirect(`${watchPath}?season=${selectedSeason}&episode=${fallback}`);
   }
+
+  const index = episodes.findIndex((e) => e.episodeNumber === episode);
+  const before = index > 0 ? episodes[index - 1] : undefined;
+  const after = index >= 0 ? episodes[index + 1] : undefined;
+  const href = (s: number, e: number) => `${watchPath}?season=${s}&episode=${e}`;
+  const prev = before
+    ? { href: href(selectedSeason, before.episodeNumber), label: `E${before.episodeNumber} · ${before.name}` }
+    : prevSeason && selectedSeason >= 1
+      ? { href: href(prevSeason.seasonNumber, prevSeason.episodeCount), label: `${prevSeason.name} finale` }
+      : null;
+  const next = after
+    ? { href: href(selectedSeason, after.episodeNumber), label: `E${after.episodeNumber} · ${after.name}` }
+    : nextSeason && selectedSeason >= 1 && !upcoming
+      ? { href: href(nextSeason.seasonNumber, 1), label: `${nextSeason.name} · Episode 1` }
+      : null;
 
   // Anime gets the anime player, which numbers episodes MAL's way.
   const animeLookup =
@@ -84,9 +111,9 @@ export async function TvWatchScreen({
 
   // All no-op to empty/false/undefined when signed out — login is optional.
   // In the anime section, "more like this" keeps to anime, linked within it.
-  const [anime, watchedKeys, signedIn, startAt, related] = await Promise.all([
+  const [anime, progress, signedIn, startAt, related] = await Promise.all([
     animeLookup,
-    getWatchedEpisodes(detail.id),
+    getEpisodeProgress(detail.id),
     isSignedIn(),
     getResumePosition({
       tmdbId: detail.id,
@@ -110,14 +137,25 @@ export async function TvWatchScreen({
       subtitle={[`S${selectedSeason} · E${episode}`, current?.name]
         .filter(Boolean)
         .join(" · ")}
+      overview={current?.overview || undefined}
       detailHref={`${detailPath}?season=${selectedSeason}`}
       watchPath={watchPath}
       similar={related}
       episodes={episodes}
       upcoming={upcoming}
       currentEpisode={episode}
-      seasons={seasons}
-      watchedKeys={watchedKeys}
+      seasons={playable}
+      prev={prev}
+      next={next}
+      // Nothing in this season has aired: lock the player instead of
+      // embedding a source that has nothing to show.
+      locked={
+        episodes.length === 0
+          ? { releaseDate: page.episodes[0]?.airDate ?? detail.releaseDate }
+          : undefined
+      }
+      watchedKeys={Object.keys(progress)}
+      progress={progress}
       signedIn={signedIn}
       startAt={startAt}
     />
@@ -153,6 +191,7 @@ export async function MovieWatchScreen({
         .join(" · ")}
       overview={detail.overview}
       detailHref={detailPath}
+      locked={isUnreleasedTitle(detail) ? { releaseDate: detail.releaseDate } : undefined}
       similar={related}
       signedIn={signedIn}
       startAt={startAt}

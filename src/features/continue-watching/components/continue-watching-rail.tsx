@@ -143,14 +143,14 @@ async function Prompt({
 
   return (
     <div
-      className="grid items-center gap-8 overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#0b0b0b] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto]"
+      className="grid items-center gap-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0b] p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto]"
       style={{
         backgroundImage:
           "radial-gradient(circle at 100% 0%, rgb(229 9 20 / 0.14), transparent 45%), radial-gradient(circle at 0% 100%, hsl(var(--brand-from) / 0.12), transparent 40%)",
       }}
     >
       <div className="flex items-start gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-gradient shadow-lg shadow-fuchsia-500/25">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-gradient shadow-lg shadow-primary/25">
           <PlayCircle className="h-6 w-6 text-white" aria-hidden />
         </span>
         <div className="space-y-4">

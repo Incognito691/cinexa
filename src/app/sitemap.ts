@@ -19,13 +19,23 @@ import { fetchTrending } from "@/server/tmdb";
 export const revalidate = 86_400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // The pages that exist whatever is trending: home, the three catalogues
+  // and the company pages. Library, player and filter pages are noIndex.
+  const page = (path: string, changeFrequency: "daily" | "monthly", priority: number) => ({
+    url: new URL(path, SITE_URL).toString(),
+    lastModified: new Date(),
+    changeFrequency,
+    priority,
+  });
   const home: MetadataRoute.Sitemap = [
-    {
-      url: new URL("/", SITE_URL).toString(),
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    },
+    page("/", "daily", 1),
+    page("/movies", "daily", 0.9),
+    page("/tv-shows", "daily", 0.9),
+    page("/anime", "daily", 0.9),
+    page("/about", "monthly", 0.3),
+    page("/support", "monthly", 0.3),
+    page("/privacy", "monthly", 0.2),
+    page("/terms", "monthly", 0.2),
   ];
 
   const trending = await fetchTrending({ type: "all", window: "week" }).catch(

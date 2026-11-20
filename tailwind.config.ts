@@ -89,7 +89,7 @@ const config: Config = {
         DEFAULT: "8px",
         "stitch-md": "12px",
         "stitch-lg": "16px",
-        "stitch-xl": "24px",
+        "stitch-xl": "16px",
         "stitch-2xl": "32px",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

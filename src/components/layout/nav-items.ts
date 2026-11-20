@@ -1,4 +1,5 @@
 import {
+  Clapperboard,
   Compass,
   Download,
   Folder,
@@ -9,6 +10,7 @@ import {
   Settings,
   Shuffle,
   Swords,
+  Tv,
   Library,
   type LucideIcon,
 } from "lucide-react";
@@ -18,14 +20,22 @@ export interface NavItem {
   href?: string;
   icon: LucideIcon;
   comingSoon?: boolean;
+  /**
+   * Extra path prefixes that belong to this section, so the sidebar stays
+   * lit on pages reached from it: a film's detail and player pages are still
+   * "Movies".
+   */
+  match?: string[];
   external?: boolean;
 }
 
 export const primaryNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home },
   { label: "Explore", href: "/explore", icon: Compass },
-  { label: "Surprise", href: "/surprise", icon: Shuffle },
+  { label: "Movies", href: "/movies", icon: Clapperboard, match: ["/movie/", "/watch/movie/"] },
+  { label: "TV Shows", href: "/tv-shows", icon: Tv, match: ["/tv/", "/watch/tv/"] },
   { label: "Anime", href: "/anime", icon: Swords },
+  { label: "Surprise", href: "/surprise", icon: Shuffle },
 ];
 
 export const libraryNav: NavItem[] = [
@@ -39,17 +49,9 @@ export const settingsNav: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-// Auth.js's own sign-out route: a plain link to it renders the built-in
-// confirm page, which owns the CSRF token. That's a link instead of a form,
-// and it's now the app's only sign-out since the topbar dropped its button.
-export const logoutNav: NavItem[] = [
-  {
-    label: "Logout",
-    icon: LogOut,
-    href: "/api/auth/signout",
-    external: true,
-  },
-];
+// No href: the sidebar renders this one as a button that opens the sign-out
+// confirmation (features/auth/components/sign-out-confirm.tsx).
+export const logoutNav: NavItem[] = [{ label: "Logout", icon: LogOut }];
 
 export const groups = [
   { label: "Menu", items: primaryNav },

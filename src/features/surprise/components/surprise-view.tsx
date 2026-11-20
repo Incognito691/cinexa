@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { memo, useEffect, useRef, useState } from "react";
-import { Play, Shuffle, Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Play, Shuffle, SlidersHorizontal, Star } from "lucide-react";
 
+import { LogoGlyph } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { animeHref } from "@/lib/anime-slug";
 import { tmdbImage } from "@/lib/env";
@@ -32,8 +33,8 @@ const KINDS: { id: Kind; label: string }[] = [
 
 interface SurpriseViewProps {
   /**
-   * Poster URLs per type: they tile the background and feed the shuffle, so
-   * choosing Anime spins through anime, not this week's films.
+   * Poster URLs per type: they fill the carousel, so choosing Anime spins
+   * through anime, not this week's films.
    */
   walls: Record<Kind, string[]>;
   genres: Record<Kind, Genre[]>;
@@ -50,6 +51,8 @@ interface Pick {
   /** Sharp poster, and a small one shown while it loads. */
   image: string | null;
   thumb: string | null;
+  /** Wide artwork that takes over the page once the pick lands. */
+  backdrop: string | null;
   kind: string;
   year: string | null;
   stars: string | null;
@@ -63,6 +66,7 @@ const fromTmdb = (item: MediaCardItem): Pick => ({
   title: item.title,
   image: tmdbImage(item.posterPath, "w500") ?? null,
   thumb: tmdbImage(item.posterPath, "w185") ?? null,
+  backdrop: tmdbImage(item.backdropPath, "w1280") ?? null,
   kind: item.mediaType === "tv" ? "Series" : "Movie",
   year: item.releaseDate?.slice(0, 4) ?? null,
   stars: item.rating > 0 ? (item.rating / 2).toFixed(1) : null,
@@ -79,6 +83,7 @@ const fromAnime = (item: AnimeItem): Pick => {
     title: item.title,
     image: item.cover,
     thumb: item.cover,
+    backdrop: item.banner,
     kind: item.format === "MOVIE" ? "Anime movie" : "Anime",
     year: item.seasonYear ? String(item.seasonYear) : null,
     stars: item.score ? (item.score / 20).toFixed(1) : null,
@@ -89,70 +94,110 @@ const fromAnime = (item: AnimeItem): Pick => {
   };
 };
 
-type Phase = "idle" | "shuffling" | "landed" | "empty";
-
-/** 12 columns x 8 rows: covers the tallest layout; the rest is clipped. */
-const TILE_COUNT = 96;
-/** The spin runs at least this long, so a fast response still feels like a shuffle. */
-const MIN_SPIN_MS = 1400;
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+type Phase = "idle" | "drawing" | "spinning" | "landed" | "empty";
 
 /*
- * Every poster here is `unoptimized`: TMDB already serves pre-sized files
- * from its CDN, and routing ~30 spin frames through Next's optimizer queued
- * them behind each other until the final pick's request failed (the broken
- * image). The deck reuses the wall's exact URLs while spinning, so every
- * frame is a browser-cache hit.
+ * The carousel: SLOTS posters standing in a ring, seen from just outside it.
+ * Each card is turned to its angle and pushed out by RADIUS; rotating the
+ * ring brings a card to the front. Everything that moves is a transform, so
+ * the browser composites it on the GPU without repainting posters.
  */
+const SLOTS = 20;
+const STEP = 360 / SLOTS;
+const CARD_W = 140;
+const RADIUS = 500;
+/** One slot per this many ms while idling: a slow, constant drift. */
+const DRIFT_MS = 3000;
+/** Degrees per second while the pick is being fetched: one turn a second. */
+const SPIN_SPEED = 360;
+/*
+ * The slow-down. The curve's starting slope is 2, so covering DECEL_TURN
+ * degrees in DECEL_MS starts at 540 / 3 x 2 = 360 deg/s: exactly SPIN_SPEED.
+ * The ring therefore eases out of the fast spin with no jolt. Change one of
+ * the three numbers and the other two have to follow.
+ */
+const DECEL_TURN = 540;
+const DECEL_MS = 3000;
+const DECEL_EASE = "cubic-bezier(0.3, 0.6, 0.2, 1)";
+/*
+ * The "vortex": while spinning at full speed the ring tips forward, so it is
+ * seen from slightly above, and the posters ride a wave, alternately lifted
+ * and dropped, that travels round as the ring turns. Both ease back to level
+ * during the slow-down, so the pick arrives on a flat, calm ring.
+ */
+const TILT_DEG = 13;
+const WAVE_PX = 26;
+/** How far the tilt drops the front of the ring; cancelled so it stays put. */
+const TILT_DROP = RADIUS * Math.sin((TILT_DEG * Math.PI) / 180);
+/** Earlier picks kept on screen. */
+const HISTORY = 5;
 
-/** Memoised so a spin frame re-renders the two tiles that changed, not all 96. */
-const Tile = memo(function Tile({ src, lit }: { src: string; lit: boolean }) {
-  return (
-    <Image
-      src={src}
-      alt=""
-      width={185}
-      height={278}
-      unoptimized
-      className={cn(
-        "aspect-[2/3] h-auto w-full rounded-md object-cover",
-        lit ? "relative z-10 scale-110 opacity-100 ring-2 ring-primary" : "opacity-30",
-      )}
-    />
-  );
-});
+/** One poster per slot, repeating the list if it is shorter than the ring. */
+const fill = (wall: string[]) =>
+  wall.length ? Array.from({ length: SLOTS }, (_, i) => wall[i % wall.length]) : [];
 
 /**
- * The surprise page: a wall of small posters, and a deck in the middle that
- * shuffles through them and lands on one random title for the chosen type and
- * genre.
+ * The surprise page: a ring of posters turning in 3D. Choose a type and
+ * genre, and the ring spins up and stops on one random title.
  *
  * Movies and TV come from `/api/discover`, so they've been through the
  * content filter like everything else; anime comes from `/api/anime/random`
- * with the anime section's own exclusions. The wall is only decoration for
- * the spin; the pick is usually not on it.
+ * with the anime section's own exclusions.
+ *
+ * Posters are `unoptimized`: TMDB and AniList already serve pre-sized files.
  */
 export function SurpriseView({ walls, genres }: SurpriseViewProps) {
   const [type, setType] = useState<Kind>("movie");
   const [genre, setGenre] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
-  const [face, setFace] = useState<string | null>(null);
   const [pick, setPick] = useState<Pick | null>(null);
-  const [lit, setLit] = useState(-1);
+  const [history, setHistory] = useState<Pick[]>([]);
+  /** Result view vs. the filter console. */
+  const [showFilters, setShowFilters] = useState(true);
 
-  // Bumped on every shuffle and on unmount, so a superseded spin stops.
+  /** What stands in each slot, the ring's rotation, and how it gets there. */
+  const [cards, setCards] = useState<string[]>(() => fill(walls.movie));
+  const [angle, setAngle] = useState(0);
+  const [motion, setMotion] = useState("none");
+  const [lockedSlot, setLockedSlot] = useState<number | null>(null);
+  /** Full-speed spin: tilt and wave on. Off again once the slow-down starts. */
+  const [vortex, setVortex] = useState(false);
+
+  // The rotation last asked for. A ref as well as state because `launch`
+  // is async and would otherwise read the angle from before it started.
+  const angleRef = useRef(0);
+  const rotateTo = (value: number, transition: string) => {
+    angleRef.current = value;
+    setMotion(transition);
+    setAngle(value);
+  };
+
+  // Bumped on every launch and on unmount, so a superseded spin stops.
   const run = useRef(0);
   const knownPages = useRef<Record<string, number>>({});
   useEffect(() => () => void run.current++, []);
 
-  const wall = walls[type];
-  const tiles = wall.length
-    ? Array.from({ length: TILE_COUNT }, (_, i) => wall[i % wall.length])
-    : [];
+  const busy = phase === "drawing" || phase === "spinning";
+  const landed = phase === "landed" && pick ? pick : null;
+
+  // Idle drift: one slot at a time, linear, so consecutive steps join into a
+  // constant slow rotation. Stops while spinning and once a pick has landed.
+  useEffect(() => {
+    if (busy || landed) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const step = () => rotateTo(angleRef.current + STEP, `transform ${DRIFT_MS}ms linear`);
+    const first = setTimeout(step, 50);
+    const timer = setInterval(step, DRIFT_MS);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [busy, landed]);
 
   function chooseType(next: Kind) {
     setType(next);
+    setCards(fill(walls[next]));
+    setLockedSlot(null);
     // Genre ids differ per catalogue, so a selection rarely carries over.
     if (!genres[next].some((g) => g.id === genre)) setGenre(null);
   }
@@ -176,188 +221,310 @@ export function SurpriseView({ walls, genres }: SurpriseViewProps) {
     });
   }
 
-  async function shuffle() {
-    const id = ++run.current;
-    setPhase("shuffling");
-
-    let settled = false;
-    const drawn = draw()
-      .catch(() => null)
-      .finally(() => {
-        settled = true;
-      });
-
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduceMotion && tiles.length > 0) {
-      // Fast flicks until the minimum time is up and the pick has arrived,
-      // then each flick slows down until it stops: a wheel losing speed.
-      const start = Date.now();
-      let delay = 60;
-      while (delay < 450) {
-        const i = Math.floor(Math.random() * tiles.length);
-        setLit(i);
-        setFace(tiles[i]);
-        await sleep(delay);
-        if (run.current !== id) return;
-        if (settled && Date.now() - start > MIN_SPIN_MS) delay *= 1.3;
-      }
-    }
-
-    const result = await drawn;
-    if (run.current !== id) return;
-    setLit(-1);
+  function land(result: Pick, slot: number | null) {
+    setHistory((prev) =>
+      pick && pick.id !== result.id
+        ? [pick, ...prev.filter((p) => p.id !== pick.id && p.id !== result.id)].slice(0, HISTORY)
+        : prev,
+    );
     setPick(result);
-    setPhase(result ? "landed" : "empty");
+    setLockedSlot(slot);
+    setShowFilters(false);
+    setPhase("landed");
   }
 
-  const shuffling = phase === "shuffling";
+  async function launch() {
+    const id = ++run.current;
+    setLockedSlot(null);
+
+    const wall = walls[type];
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const animate = !reduceMotion && wall.length > 0;
+
+    // Spin fast straight away, at a constant speed, for as long as the pick
+    // takes to arrive. The transition is far longer than any fetch; it gets
+    // replaced by the slow-down below.
+    const from = angleRef.current;
+    const started = performance.now();
+    if (animate) rotateTo(from + SPIN_SPEED * 60, "transform 60000ms linear");
+    setVortex(animate);
+    setPhase(animate ? "spinning" : "drawing");
+    /** Where the ring actually is right now. */
+    const current = () => from + (SPIN_SPEED * (performance.now() - started)) / 1000;
+
+    const result = await draw().catch(() => null);
+    if (run.current !== id) return;
+
+    if (!result) {
+      // Settle on the nearest poster rather than freezing mid-turn.
+      if (animate) {
+        rotateTo(Math.ceil((current() + 90) / STEP) * STEP, "transform 900ms ease-out");
+      }
+      setVortex(false);
+      setPhase("empty");
+      setShowFilters(true);
+      return;
+    }
+    if (!animate || !result.thumb) {
+      land(result, null);
+      return;
+    }
+
+    // Stop DECEL_TURN degrees ahead, on a slot boundary. That slot is at the
+    // back of the ring right now (540 = a turn and a half), so its poster can
+    // be swapped for the pick out of sight.
+    const target = Math.ceil((current() + DECEL_TURN) / STEP) * STEP;
+    const slot = (((target / STEP) % SLOTS) + SLOTS) % SLOTS;
+    setCards((prev) => prev.map((src, i) => (i === slot ? result.thumb! : src)));
+    rotateTo(target, `transform ${DECEL_MS}ms ${DECEL_EASE}`);
+    setVortex(false);
+
+    // A timer rather than `transitionend`, which doesn't fire if the tab is
+    // hidden mid-spin and would leave the page stuck spinning.
+    setTimeout(() => {
+      if (run.current === id) land(result, slot);
+    }, DECEL_MS + 100);
+  }
 
   return (
     // Exactly the viewport left under the topbar (mt-3 + h-14 + main pt-4),
     // with `-mb-14` cancelling most of main's pb-16, so the page never scrolls.
-    <section className="relative isolate -mb-14 h-[calc(100dvh-6.75rem)] overflow-hidden rounded-[28px] border border-white/[0.07] bg-black">
-      {/* Poster wall */}
+    <section // From 768px up; on phones the section grows with its content and the
+    // page scrolls, instead of a scroll area nested inside a fixed box.
+    className="relative isolate flex min-h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0a0a0a] md:-mb-14 md:h-[calc(100dvh-6.75rem)] md:min-h-0">
+      {/* The pick's own artwork, dimmed, once it lands. */}
+      {landed?.backdrop ? (
+        <Image
+          key={landed.id}
+          src={landed.backdrop}
+          alt=""
+          fill
+          unoptimized
+          className="backdrop-in -z-30 object-cover"
+        />
+      ) : null}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 grid grid-cols-5 content-start gap-1.5 p-1.5 sm:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12"
-      >
-        {tiles.map((src, i) => (
-          <Tile key={i} src={src} lit={i === lit} />
-        ))}
-      </div>
-
-      {/* Darken the middle so the controls read over the wall. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.75)_40%,rgba(0,0,0,0.25)_100%)]"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(ellipse_75%_60%_at_50%_38%,rgba(10,10,10,0.35)_0%,rgba(10,10,10,0.85)_70%,#0a0a0a_100%)]"
       />
 
-      <div className="flex h-full flex-col items-center justify-[safe_center] gap-5 overflow-y-auto px-4 py-6 text-center">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Can&apos;t decide? <span className="text-brand-gradient">Shuffle it.</span>
-          </h1>
-          <p className="text-sm text-white/60">Pick a type and a genre, and we&apos;ll choose for you.</p>
-        </div>
+      {/* A soft pool of the brand red under the ring; everything else is the
+          site's plain near-black. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[30%] -z-10 h-[280px] w-[760px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(229,9,20,0.14),transparent)]"
+      />
 
-        {/* Type */}
-        <div role="group" aria-label="Type" className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] p-1">
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              type="button"
-              aria-pressed={type === k.id}
-              disabled={shuffling}
-              onClick={() => chooseType(k.id)}
-              className={cn(
-                "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
-                type === k.id ? "bg-primary text-primary-foreground" : "text-white/70 hover:text-white",
-              )}
-            >
-              {k.label}
-            </button>
-          ))}
+      {/* Stage */}
+      <div
+        aria-hidden
+        // Scaled down on phones: the ring is sized in px for the 3D maths.
+        className="relative mx-auto -my-6 h-[280px] w-full max-w-[980px] shrink-0 scale-[0.72] sm:my-0 sm:mt-8 sm:scale-100"
+        style={{
+          perspective: 1100,
+          maskImage: "linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)",
+        }}
+      >
+        {/* Two nested 3D layers so the tilt and the spin animate on their
+            own clocks: the outer one tips the ring, the inner one turns it. */}
+        <div
+          className="absolute left-1/2 top-1/2 h-0 w-0"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: vortex
+              ? `translateZ(${-RADIUS}px) translateY(${-TILT_DROP}px) rotateX(${-TILT_DEG}deg)`
+              : `translateZ(${-RADIUS}px) translateY(0px) rotateX(0deg)`,
+            transition: "transform 1400ms cubic-bezier(0.3, 0.6, 0.2, 1)",
+          }}
+        >
+        <div
+          className="absolute left-0 top-0 h-0 w-0"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: `rotateY(${-angle}deg)`,
+            transition: motion,
+            willChange: "transform",
+          }}
+        >
+          {cards.map((src, i) => {
+            const locked = landed && i === lockedSlot;
+            return (
+              <div
+                key={i}
+                className="absolute"
+                style={{
+                  width: CARD_W,
+                  height: CARD_W * 1.5,
+                  left: -CARD_W / 2,
+                  top: -(CARD_W * 1.5) / 2,
+                  // The wave: five crests round the ring.
+                  transform: `rotateY(${i * STEP}deg) translateZ(${RADIUS}px) translateY(${
+                    vortex ? Math.round(Math.sin((i / SLOTS) * Math.PI * 2 * 5) * WAVE_PX) : 0
+                  }px)`,
+                  transition: "transform 1200ms cubic-bezier(0.3, 0.6, 0.2, 1)",
+                  backfaceVisibility: "hidden",
+                }}
+              >
+                <div
+                  className={cn(
+                    "relative h-full w-full overflow-hidden rounded-lg ring-1 ring-white/10 transition duration-500",
+                    locked && "scale-110 shadow-2xl shadow-black/70 ring-2 ring-white",
+                    landed && !locked && "opacity-25",
+                  )}
+                >
+                  <Image src={src} alt="" fill unoptimized className="object-cover" />
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* Genre */}
-        <div role="group" aria-label="Genre" className="flex max-w-3xl flex-wrap justify-center gap-2">
-          {[{ id: null, name: "Any genre" }, ...genres[type]].map((g) => (
-            <button
-              key={g.id ?? "any"}
-              type="button"
-              aria-pressed={genre === g.id}
-              disabled={shuffling}
-              onClick={() => setGenre(g.id)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                genre === g.id
-                  ? "border-primary bg-primary/20 text-white"
-                  : "border-white/10 bg-white/[0.04] text-white/70 hover:border-white/25 hover:text-white",
-              )}
-            >
-              {g.name}
-            </button>
-          ))}
         </div>
+      </div>
 
-        {/* Deck: only once there's something to show. */}
-        {phase === "shuffling" || (phase === "landed" && pick) ? (
-          <div className="flex flex-col items-center gap-6 md:flex-row md:text-left">
-            <div
-              key={phase === "landed" ? pick?.id : "deck"}
-              className={cn(
-                "relative aspect-[2/3] w-36 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-white/[0.04] shadow-2xl shadow-primary/20 sm:w-44",
-                phase === "landed" && "pick-pop ring-2 ring-primary",
-              )}
-            >
-              {/* Spinning: the wall's own w185 posters (cache hits). Landed: the
-                  pick's small poster, with the sharp one on top once loaded. */}
-              {phase === "landed" ? (
-                pick?.thumb ? (
-                  <Image src={pick.thumb} alt="" fill unoptimized className="object-cover" />
-                ) : null
-              ) : face ? (
-                <Image
-                  src={face}
-                  alt=""
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
+      {/* Console / result */}
+      <div className="flex flex-1 flex-col items-center justify-start gap-4 px-4 pb-6 pt-2 text-center md:min-h-0 md:overflow-y-auto">
+        {landed && !showFilters ? (
+          <div key={landed.id} className="max-w-xl space-y-4 duration-500 animate-in fade-in slide-in-from-bottom-3 motion-reduce:animate-none">
+            <div className="space-y-2.5">
+              <p className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-black/40 px-3 py-1 text-[11px] font-medium text-white/70">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Your pick
+              </p>
+              <Link
+                href={landed.href}
+                className="block text-3xl font-bold tracking-tight text-white hover:underline sm:text-4xl"
+              >
+                {landed.title}
+              </Link>
+              <ul className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-medium text-white/80">
+                <li className="rounded-md bg-white/[0.08] px-2 py-1">{landed.kind}</li>
+                {landed.year ? <li className="rounded-md bg-white/[0.08] px-2 py-1">{landed.year}</li> : null}
+                {landed.stars ? (
+                  <li className="inline-flex items-center gap-1 rounded-md bg-white/[0.08] px-2 py-1 text-yellow-300">
+                    <Star className="h-3 w-3 fill-yellow-300" aria-hidden />
+                    {landed.stars}
+                  </li>
+                ) : null}
+              </ul>
+              {landed.overview ? (
+                <p className="mx-auto line-clamp-2 max-w-lg text-sm leading-relaxed text-white/65">
+                  {landed.overview}
+                </p>
               ) : null}
-              {phase === "landed" && pick?.image ? (
-                <Image src={pick.image} alt={pick.title} fill unoptimized className="object-cover" />
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button asChild>
+                <Link href={landed.watchHref}>
+                  <Play className="fill-current" aria-hidden /> Watch now
+                </Link>
+              </Button>
+              <Button variant="secondary" onClick={launch}>
+                <Shuffle aria-hidden /> Spin again
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setShowFilters(true)}
+                aria-label="Change filters"
+                title="Change filters"
+                className="rounded-xl"
+              >
+                <SlidersHorizontal aria-hidden />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                Can&apos;t decide? <span className="text-primary">Let it choose.</span>
+              </h1>
+              {phase === "empty" ? null : (
+                <p className="text-sm text-white/55">Pick a type and a genre, then spin.</p>
+              )}
+              {phase === "empty" ? (
+                <p className="text-sm text-white/60">Nothing found for that. Try another genre.</p>
               ) : null}
             </div>
 
-            {phase === "landed" && pick ? (
-              <div className="pick-pop max-w-md space-y-4">
-                <div className="space-y-1.5">
-                  <Link href={pick.href} className="text-xl font-semibold text-white hover:underline">
-                    {pick.title}
+            {/* Type */}
+            <div role="group" aria-label="Type" className="inline-flex rounded-xl border border-white/10 bg-black/50 p-1">
+              {KINDS.map((k) => (
+                <button
+                  key={k.id}
+                  type="button"
+                  aria-pressed={type === k.id}
+                  disabled={busy}
+                  onClick={() => chooseType(k.id)}
+                  className={cn(
+                    "rounded-lg px-4 py-1.5 text-sm font-medium transition-colors",
+                    type === k.id ? "bg-primary text-primary-foreground" : "text-white/70 hover:text-white",
+                  )}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Genre */}
+            <div role="group" aria-label="Genre" className="flex max-w-3xl flex-wrap justify-center gap-2">
+              {[{ id: null, name: "Any genre" }, ...genres[type]].map((g) => (
+                <button
+                  key={g.id ?? "any"}
+                  type="button"
+                  aria-pressed={genre === g.id}
+                  disabled={busy}
+                  onClick={() => setGenre(g.id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    genre === g.id
+                      ? "border-white bg-white text-black"
+                      : "border-white/[0.08] bg-white/[0.03] text-white/65 hover:border-white/20 hover:bg-white/[0.07] hover:text-white",
+                  )}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+
+            {/* No "Spinning…" label: the ring says it. The button just steps
+                aside while it turns, keeping its space so nothing jumps. */}
+            <Button
+              onClick={launch}
+              disabled={busy}
+              className={cn("px-5 transition-opacity duration-200", busy && "invisible opacity-0")}
+            >
+              {/* The brand's popcorn bucket, as on the logo tile. */}
+              <LogoGlyph className="!size-5" />
+              Surprise me
+            </Button>
+          </>
+        )}
+
+        {/* Earlier picks: a spin isn't a one-way door. */}
+        {history.length > 0 && !busy ? (
+          <div className="mt-auto space-y-2 pt-2">
+            <p className="text-xs text-white/40">Earlier picks</p>
+            <ul className="flex justify-center gap-2">
+              {history.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    href={p.href}
+                    title={p.title}
+                    className="relative block aspect-[2/3] w-11 overflow-hidden rounded-md opacity-60 ring-1 ring-white/10 transition hover:opacity-100 hover:ring-white/40"
+                  >
+                    {p.thumb ? <Image src={p.thumb} alt={p.title} fill unoptimized className="object-cover" /> : null}
                   </Link>
-                  <p className="flex items-center justify-center gap-2 text-xs text-white/60 md:justify-start">
-                    <span>{pick.kind}</span>
-                    {pick.year ? <span>· {pick.year}</span> : null}
-                    {pick.stars ? (
-                      <span className="inline-flex items-center gap-1 text-yellow-300">
-                        · <Star className="h-3 w-3 fill-yellow-300" aria-hidden />
-                        {pick.stars}
-                      </span>
-                    ) : null}
-                  </p>
-                  {pick.overview ? (
-                    <p className="line-clamp-3 text-sm text-white/70">{pick.overview}</p>
-                  ) : null}
-                </div>
-                <div className="flex justify-center gap-3 md:justify-start">
-                  <Button asChild size="lg">
-                    <Link href={pick.watchHref}>
-                      <Play className="fill-current" aria-hidden /> Watch now
-                    </Link>
-                  </Button>
-                  <Button variant="secondary" size="lg" onClick={shuffle}>
-                    <Shuffle aria-hidden /> Shuffle again
-                  </Button>
-                </div>
-              </div>
-            ) : null}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
 
         <p className="sr-only" aria-live="polite">
-          {phase === "landed" && pick ? `Your pick: ${pick.title}` : ""}
+          {landed ? `Your pick: ${landed.title}` : ""}
         </p>
-
-        {phase === "empty" ? (
-          <p className="text-sm text-white/60">Nothing found. Try another genre.</p>
-        ) : null}
-
-        {phase !== "landed" ? (
-          <Button size="lg" onClick={shuffle} disabled={shuffling}>
-            <Shuffle aria-hidden /> {shuffling ? "Shuffling…" : "Surprise me"}
-          </Button>
-        ) : null}
       </div>
     </section>
   );

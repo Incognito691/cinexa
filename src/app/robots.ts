@@ -26,6 +26,9 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/api/",
         "/explore",
+        // The paged grids: every filter and page number is its own URL.
+        "/movies/all",
+        "/tv-shows/all",
         "/watch/",
         "/favourites",
         "/my-collection",

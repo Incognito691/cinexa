@@ -45,7 +45,7 @@ export default async function AnimePage() {
 
   if (!data) {
     return (
-      <div className="mx-auto max-w-xl rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-8 text-center">
+      <div className="mx-auto max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 text-center">
         <h1 className="text-xl font-semibold text-white">Anime is taking a breather</h1>
         <p className="mt-2 text-sm text-white/60">
           We couldn&apos;t reach our anime source just now. Try again in a minute.

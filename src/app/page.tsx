@@ -2,7 +2,6 @@ import {
   BentoGrid,
   RecommendedRail,
   Hero,
-  NowPlayingRail,
   SiteFooter,
   TopMoviesRail,
   TopTvRail,
@@ -59,7 +58,6 @@ async function safeFetch(
 export default async function HomePage() {
   const [
     trending,
-    nowPlaying,
     topMovies,
     topTv,
     bento,
@@ -67,9 +65,6 @@ export default async function HomePage() {
     topHindiTv,
   ] = await Promise.all([
     safeFetch(() => fetchTrending({ type: "movie", window: "week", page: 1 })),
-    safeFetch(() =>
-      fetchDiscover({ type: "movie", category: "now_playing", page: 1 }),
-    ),
     safeFetch(() =>
       fetchDiscover({ type: "movie", category: "popular", page: 1 }),
     ),
@@ -110,7 +105,6 @@ export default async function HomePage() {
         <ContinueWatchingRail />
         {/* Personalised; renders nothing without a session or history. */}
         <RecommendedRail />
-        <NowPlayingRail initial={nowPlaying} />
         <TopMoviesRail initial={topMovies} />
         <TopTvRail initial={topTv} />
         <BentoGrid initial={bento.items} />

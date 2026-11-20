@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Check, Info } from "lucide-react";
+import { ArrowLeft, Info, Lock } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { AiringTime } from "@/components/airing-time";
+import { releaseLabel } from "@/lib/release";
 import type { MediaCardItem, TvEpisode, TvSeasonSummary, UpcomingEpisode } from "@/types/media";
 
 import type { PlaybackTarget } from "../lib/sources";
-import { EpisodeNav } from "./episode-nav";
+import { EpisodeNav, type EpisodeStep } from "./episode-nav";
 import { WATCH_CHROME_PX } from "../lib/layout";
 import { WatchPlayer } from "./watch-player";
 import { WatchTracker } from "./watch-tracker";
@@ -17,7 +16,7 @@ interface WatchViewProps {
   title: string;
   /** e.g. "S1 · E3 · Spoonful" — the line under the title. */
   subtitle?: string;
-  /** Movies only — fills the control bar, which has no episode picker to hold. */
+  /** The movie's or the episode's overview, shown under the title. */
   overview?: string;
   /** Where the "details" link goes. */
   detailHref: string;
@@ -28,24 +27,35 @@ interface WatchViewProps {
    */
   watchPath?: string;
   similar: MediaCardItem[];
-  /** TV only — powers the episode strip and the header nav. */
+  /** TV only — the aired episodes of this season, for the picker. */
   episodes?: TvEpisode[];
   /** The next, not-yet-aired episode: listed, but not playable. */
   upcoming?: UpcomingEpisode | null;
   currentEpisode?: number;
+  /** TV only — seasons that have something to play. */
   seasons?: TvSeasonSummary[];
+  /** TV only — resolved by the server, season boundaries included. */
+  prev?: EpisodeStep | null;
+  next?: EpisodeStep | null;
+  /** Set when there's nothing to play yet; replaces the player. */
+  locked?: { releaseDate: string | null };
   /** `s{n}e{n}` keys the signed-in user has already watched. */
   watchedKeys?: string[];
+  /** Per-episode progress (0..1, null = watched with no runtime), same keys. */
+  progress?: Record<string, number | null>;
   signedIn?: boolean;
   /** Stored playback position for this exact title/episode, in seconds. */
   startAt?: number;
 }
 
+const FRAME_WIDTH = "max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))]";
+
 /**
- * The watch page: player first, everything else under it.
+ * The watch page: control bar, player, then what's playing and what's next.
  *
- * Nothing here is heavier than it needs to be — the point of the page is the
- * picture, so metadata is a single line and the rest is navigation.
+ * There is exactly one episode control, the picker in the bar. A second strip
+ * of numbered buttons used to sit under the player; two controls for one
+ * choice only raised the question of which to use.
  */
 export function WatchView({
   target,
@@ -59,22 +69,18 @@ export function WatchView({
   upcoming,
   currentEpisode,
   seasons,
+  prev = null,
+  next = null,
+  locked,
   watchedKeys = [],
+  progress = {},
   signedIn = false,
   startAt,
 }: WatchViewProps) {
-  const watched = new Set(watchedKeys);
   const isTv = target.mediaType === "tv";
   const season = target.season ?? 1;
-
   const playPath = watchPath ?? `/watch/tv/${target.tmdbId}`;
-  const episodeHref = (episodeNumber: number) =>
-    `${playPath}?season=${target.season ?? 1}&episode=${episodeNumber}`;
-
-  // The next aired episode in this season, for the anime player's auto-next.
-  const index = episodes?.findIndex((e) => e.episodeNumber === currentEpisode) ?? -1;
-  const next = index >= 0 ? episodes?.[index + 1] : undefined;
-  const nextHref = next ? episodeHref(next.episodeNumber) : undefined;
+  const releases = releaseLabel(locked?.releaseDate);
 
   return (
     <div
@@ -83,17 +89,21 @@ export function WatchView({
     >
       {/* Navigation above the picture: on a player page the control you reach
           for is "next episode", and burying it under the frame means scrolling
-          past the video to change what you're watching. The strip spans the
-          full width now that the title has moved below. */}
-      {/* `relative z-30` is load-bearing: the bar's `backdrop-blur` creates a
-          stacking context, so its subtree paints atomically at the bar's place
-          in document order — and the player, being a later sibling, painted on
-          top of the open episode panel and swallowed the clicks. */}
-      <header className="relative z-30 mx-auto w-full max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] px-4 sm:px-6">
-        {/* One bar rather than loose pills: grouping the controls gives them a
-            shared edge to breathe against, and keeps the row from reading as
-            four unrelated buttons floating over the page. */}
-        <div className="relative flex items-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-1.5 backdrop-blur-md">
+          past the video to change what you're watching. `relative z-30` keeps
+          the open episode panel above the player, a later sibling. */}
+      <header className={`relative z-30 mx-auto w-full ${FRAME_WIDTH} px-4 sm:px-6`}>
+        <div className="relative flex items-center gap-2 rounded-2xl border border-white/[0.07] bg-[#0e0e10] p-1.5">
+          {/* Back to the title's page. One control on the left instead of a
+              "Details" link on the right: it's where the eye starts. */}
+          <Link
+            href={detailHref}
+            aria-label="Back to details"
+            title="Back to details"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+          </Link>
+
           {isTv && seasons && episodes ? (
             <EpisodeNav
               tmdbId={target.tmdbId}
@@ -103,114 +113,71 @@ export function WatchView({
               upcoming={upcoming}
               season={season}
               episode={currentEpisode ?? 1}
+              prev={prev}
+              next={next}
               watchedKeys={watchedKeys}
-              signedIn={signedIn}
+              progress={progress}
+              signedIn={signedIn && !locked}
             />
           ) : (
-            // A movie has no episodes to pick, so the bar carries what it's
-            // playing instead of sitting empty.
-            // It's an `h1` because for a movie this is the page's only title —
-            // the block under the player is TV-only.
-            <div className="min-w-0 flex-1 px-3.5 py-1">
-              <h1 className="truncate text-sm font-medium text-white">{title}</h1>
-              {subtitle || overview ? (
-                <p className="truncate text-xs text-white/45">
-                  {[subtitle, overview].filter(Boolean).join(" · ")}
-                </p>
-              ) : null}
+            // A movie has no episodes to pick, so the bar just names it. The
+            // page's `h1` and the overview sit under the player.
+            <div className="min-w-0 flex-1 px-1.5 py-1">
+              <p className="truncate text-sm font-medium text-white">{title}</p>
+              {subtitle ? <p className="truncate text-xs text-white/45">{subtitle}</p> : null}
             </div>
           )}
-
-          <span aria-hidden className="h-6 w-px shrink-0 bg-white/[0.08]" />
-
-          <Link
-            href={detailHref}
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-3.5 text-xs font-medium text-white/65 transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <Info className="h-3.5 w-3.5" aria-hidden />
-            <span className="hidden sm:inline">Details</span>
-          </Link>
         </div>
       </header>
 
-      {/* Position tracking runs for both media types. Only the *dwell* half is
-          TV-exempt, because `EpisodeNav` already runs that timer to drive its
-          watched tick. */}
-      <WatchTracker
-        target={target}
-        signedIn={signedIn}
-        dwellFallback={!isTv}
-      />
-
-      <WatchPlayer target={target} title={title} startAt={startAt} nextHref={nextHref} />
+      {locked ? (
+        <div className={`mx-auto w-full ${FRAME_WIDTH}`}>
+          <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-white/[0.08] bg-[radial-gradient(circle_at_50%_40%,rgba(229,9,20,0.14),transparent_60%)] bg-black">
+            <div className="max-w-md space-y-4 px-6 text-center">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06]">
+                <Lock className="h-6 w-6 text-white/80" aria-hidden />
+              </span>
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-semibold text-white">Not released yet</h2>
+                <p className="text-sm leading-relaxed text-white/60">
+                  {releases
+                    ? `${title} comes out on ${releases}. It unlocks here once it's released.`
+                    : `${title} doesn't have a release date yet. It unlocks here once it's released.`}
+                </p>
+              </div>
+              <Link
+                href={detailHref}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 text-sm font-medium text-white transition hover:bg-white/[0.1]"
+              >
+                <Info className="h-4 w-4" aria-hidden /> View details
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Position tracking runs for both media types. Only the *dwell*
+              half is TV-exempt, because `EpisodeNav` already runs that timer
+              to drive its watched tick. */}
+          <WatchTracker target={target} signedIn={signedIn} dwellFallback={!isTv} />
+          <WatchPlayer
+            target={target}
+            title={title}
+            startAt={startAt}
+            nextHref={next?.href}
+            watchPath={isTv ? playPath : undefined}
+          />
+        </>
+      )}
 
       <div className="mx-auto max-w-[1400px] space-y-10 px-4 sm:px-6">
-        {isTv ? (
-          <div className="min-w-0 pt-2">
-            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              {title}
-            </h1>
-            {subtitle ? (
-              <p className="mt-1 text-sm text-white/55">{subtitle}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {episodes && episodes.length > 0 ? (
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-white/80">
-              Season {season}
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {episodes.map((episode) => {
-                const active = episode.episodeNumber === currentEpisode;
-                return (
-                  <li key={episode.id}>
-                    <Link
-                      href={episodeHref(episode.episodeNumber)}
-                      aria-current={active ? "page" : undefined}
-                      title={episode.name}
-                      className={cn(
-                        "block min-w-[3rem] rounded-lg border px-3 py-2 text-center text-xs font-medium transition",
-                        active
-                          ? "border-transparent bg-primary text-primary-foreground"
-                          : "border-white/[0.1] bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/[0.08] hover:text-white",
-                      )}
-                    >
-                      <span className="inline-flex items-center justify-center gap-1">
-                        {episode.episodeNumber}
-                        {watched.has(`s${season}e${episode.episodeNumber}`) ? (
-                          <Check
-                            className={cn(
-                              "h-3 w-3",
-                              active ? "text-primary-foreground" : "text-emerald-400",
-                            )}
-                            aria-label="Watched"
-                          />
-                        ) : null}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-              {upcoming ? (
-                <li
-                  className="flex items-center gap-2 rounded-lg border border-dashed border-white/[0.12] px-3 py-2 text-xs text-white/45"
-                  title={upcoming.name}
-                >
-                  <span className="font-medium text-white/60">{upcoming.episodeNumber}</span>
-                  {upcoming.airing ? (
-                    <span>
-                      Airs <AiringTime at={upcoming.airing.at} mode={upcoming.airing.mode} />
-                    </span>
-                  ) : (
-                    <span>Coming soon</span>
-                  )}
-                </li>
-              ) : null}
-            </ul>
-          </section>
-        ) : null}
+        <div className="min-w-0 max-w-3xl pt-2">
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-white/55">{subtitle}</p> : null}
+          {overview ? (
+            <p className="mt-3 text-sm leading-relaxed text-white/65">{overview}</p>
+          ) : null}
+        </div>
 
         <SimilarGrid
           items={similar}

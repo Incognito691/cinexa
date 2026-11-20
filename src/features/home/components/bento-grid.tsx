@@ -43,7 +43,7 @@ export function BentoGrid({ initial }: { initial: MediaCardItem[] }) {
           </p>
         </div>
         <Link
-          href="/explore?tab=movies&category=popular"
+          href="/movies/all"
           className="shrink-0 rounded-full border border-white/[0.08] px-3.5 py-1.5 text-xs font-medium text-white/60 transition-colors duration-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white"
         >
           See all

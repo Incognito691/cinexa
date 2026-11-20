@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -18,10 +18,29 @@ interface AppShellProps {
   children: React.ReactNode;
   /** Server-rendered auth control; passed as a slot so the shell stays client-side. */
   userMenu?: React.ReactNode;
+  /** Resolved on the server by the layout; hides Logout when signed out. */
+  signedIn?: boolean;
 }
 
-export function AppShell({ children, userMenu }: AppShellProps) {
-  const [expanded, setExpanded] = usePersistedFlag(SIDEBAR_KEY, true);
+/** True from 1024px up. Server and first paint assume a wide screen. */
+const WIDE = "(min-width: 1024px)";
+const subscribeWide = (onChange: () => void) => {
+  const query = window.matchMedia(WIDE);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+
+export function AppShell({ children, userMenu, signedIn = false }: AppShellProps) {
+  const [preferExpanded, setExpanded] = usePersistedFlag(SIDEBAR_KEY, true);
+  // On tablets (768 to 1023px) the full sidebar would take a third of the
+  // screen and squeeze every grid, so it stays an icon rail there whatever
+  // the saved preference; the preference applies again on a wider screen.
+  const wide = useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia(WIDE).matches,
+    () => true,
+  );
+  const expanded = preferExpanded && wide;
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -38,15 +57,10 @@ export function AppShell({ children, userMenu }: AppShellProps) {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background">
-      {/* Ambient backdrop */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed -top-32 left-0 right-0 -z-10 h-[60vh] bg-[radial-gradient(70%_60%_at_18%_0%,rgba(168,85,247,0.45),transparent_70%),radial-gradient(60%_55%_at_82%_5%,rgba(236,72,153,0.4),transparent_70%)]"
-      />
-
       {/* Sidebar — fixed outside the flow so it never scrolls with content. */}
       <AppSidebar
         expanded={expanded}
+        signedIn={signedIn}
         onToggle={() => setExpanded((value) => !value)}
       />
 
@@ -59,7 +73,9 @@ export function AppShell({ children, userMenu }: AppShellProps) {
           )}
         >
           <SidebarContent
-            expanded={expanded}
+            // The drawer always shows labels, even if the desktop rail is collapsed.
+            expanded
+            signedIn={signedIn}
             onToggle={() => setExpanded((value) => !value)}
             onNavigate={() => setMobileOpen(false)}
           />
@@ -77,7 +93,7 @@ export function AppShell({ children, userMenu }: AppShellProps) {
         )}
         style={{ "--sidebar-w": sidebarWidth } as React.CSSProperties}
       >
-        <AppTopbar onMenuClick={() => setMobileOpen(true)} userMenu={userMenu} />
+        <AppTopbar onMenuClick={() => setMobileOpen(true)} userMenu={userMenu} signedIn={signedIn} />
         <main className="flex-1 px-1 pb-16 pt-4 sm:px-3 lg:px-4">
           <PageTransition>{children}</PageTransition>
         </main>
