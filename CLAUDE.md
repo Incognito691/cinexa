@@ -160,6 +160,18 @@ Metadata comes from **AniList** (free GraphQL, no key, **30 req/min**). `fetchAn
 
 Cards carry **AniList ids** and link to `/anime/:id/:slug` (slug is cosmetic). That route resolves the id with `resolveAnilist()` and renders the TMDB detail view **in place** (no redirect, so the URL stays under `/anime`); `TvDetailView`'s `basePath` keeps season links there too. Canonical metadata still points at `/tv/:id` or `/movie/:id`. The anime route also fetches AniList's `nextAiringEpisode`. `cutAtNextEpisode()` (`features/title/lib/airing.ts`) lists aired episodes plus **only the next one** (TMDB's later placeholders are dropped, for every show), matching AniList's time to the TMDB episode airing within a day (by date, not number: split-cour seasons renumber). Without AniList, the next episode shows TMDB's date only. Resolution uses the Fribb/anime-lists cross-reference (held in module memory for a day; it's ~6 MB, over Next's 2 MB data-cache limit), then falls back to a TMDB title search with any "Season N" suffix split off. The TMDB detail page then runs the full content filter, so a blocked title still 404s. Links use `prefetch={false}` so a rail in view doesn't trigger twenty resolutions.
 
+### Sessions, watch navigation and unreleased titles
+
+- **Use `getSession()` / `currentUserId()` from `server/session.ts`, never `auth()` directly.** Sessions are database rows, so each `auth()` is a query; `getSession` is wrapped in React `cache` so a page makes one. Calling `auth()` per feature exhausted the 5-connection pool (AdapterError, "Timed out fetching a new connection").
+- The watch page has **one** episode control (`EpisodePicker` in the bar). Prev/Next targets are resolved in `features/watch/screens.tsx` and cross seasons; only seasons with aired episodes are offered. A URL one past a season's last episode rolls into the next season; anything else out of range clamps.
+- `lib/release.ts` decides "not released" (future date, or a pre-release TMDB status for films). Cards show a lock badge, detail pages swap Watch for a locked pill plus banner, and the watch screens render a locked panel instead of a player.
+
+### Responsive rules
+
+- Breakpoints: below 768px the sidebar is a drawer; 768 to 1023px it is **always the icon rail** (`AppShell` ignores the saved "expanded" preference there, because the full sidebar squeezed every grid); from 1024px the preference applies. Page content caps at `max-w-[1560px]`, so monitors and TVs get centred content rather than stretched rows.
+- Surprise is a fixed-height, non-scrolling stage from 768px; on phones it grows with its content and the page scrolls. Its ring is sized in px for the 3D maths and scaled down with `scale-[0.72]` on phones.
+- `app/manifest.ts`, `app/apple-icon.tsx` and `app/icons/[size]` (192, 512) provide the install icons; `app/sitemap.ts` lists the static landing and company pages plus trending titles.
+
 ### Watch progress
 
 The player is a cross-origin iframe, so progress only exists if the provider hands it over. **VidLink** (`SOURCES[0]`) posts `{ type: "PLAYER_EVENT", data: { currentTime, duration } }` and accepts `?startAt=`; SuperEmbed and VidSrc post nothing and can't seek, so on those two a title still reaches Continue Watching (via the dwell timer) but with no bar and no resume.

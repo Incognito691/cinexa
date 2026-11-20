@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Play, Star } from "lucide-react";
+import { Lock, Play, Star } from "lucide-react";
 
-import { LibraryButton } from "@/features/library";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/env";
+import { isUnreleased } from "@/lib/release";
 import type { MediaCardItem } from "@/types/media";
 
 /**
@@ -14,8 +14,10 @@ import type { MediaCardItem } from "@/types/media";
  *
  * Two layouts, one visual language:
  *   - `rail` — fixed width, snap-scroll child, title sits *below* the poster.
- *   - `grid` — fills its grid cell, title is *overlaid*, plus a hover action
- *     row (watch + favourite).
+ *   - `grid` — fills its grid cell, title is *overlaid*.
+ *
+ * Both hover the same way: one play button, and the whole card opens the
+ * title's page. Favouriting and saving live on that page.
  *
  * This replaced two divergent implementations (home's rail card and the
  * `CardItem` that lived inside explore's card-grid) which had already drifted
@@ -50,17 +52,17 @@ export function MediaCard({
 
   const detailHref =
     item.href ?? (item.mediaType === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`);
-  const watchHref =
-    item.watchHref ??
-    (item.mediaType === "movie"
-      ? `/watch/movie/${item.id}`
-      : `/watch/tv/${item.id}?season=1&episode=1`);
 
   const poster = item.posterPath
     ? tmdbImage(item.posterPath, POSTER_SIZE)
     : null;
   const rating = item.rating > 0 ? (item.rating / 2).toFixed(1) : null;
   const year = item.releaseDate ? item.releaseDate.slice(0, 4) : null;
+  // Announced but not out: the card still opens the detail page, but it's
+  // marked locked and offers no Watch button.
+  // No date at all counts too: in TMDB's lists that's an announced title
+  // ("Ramayana: Part Two"), not an old one with missing data.
+  const unreleased = !item.releaseDate || isUnreleased(item.releaseDate);
 
   const surface = (
     <>
@@ -108,18 +110,27 @@ export function MediaCard({
         </span>
       ) : null}
 
-      {/* Centered play affordance on hover */}
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 flex items-center justify-center",
-          "opacity-0 transition-opacity duration-300 group-hover:opacity-100",
-          isGrid && "items-start pt-[38%]",
-        )}
-      >
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container text-white shadow-lg shadow-primary/40">
-          <Play className="h-5 w-5 fill-current" />
-        </span>
-      </div>
+      {unreleased ? (
+        // Always visible, unlike the hover play button it replaces.
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/75 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white">
+            <Lock className="h-3 w-3" aria-hidden />
+            Not released
+          </span>
+        </div>
+      ) : (
+        // Centered play affordance on hover
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 flex items-center justify-center",
+            "opacity-0 transition-opacity duration-300 group-hover:opacity-100",
+            )}
+        >
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container text-white shadow-lg shadow-primary/40">
+            <Play className="h-5 w-5 fill-current" />
+          </span>
+        </div>
+      )}
     </>
   );
 
@@ -178,22 +189,6 @@ export function MediaCard({
           </p>
           {year ? <p className="text-[11px] text-white/55">{year}</p> : null}
 
-          <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <Link
-              href={watchHref}
-              className="pointer-events-auto inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-xs font-semibold text-black shadow transition hover:bg-white/90"
-            >
-              <Play className="h-3.5 w-3.5 fill-current" />
-              Watch
-            </Link>
-            <LibraryButton
-              kind="favourite"
-              tmdbId={item.id}
-              mediaType={item.mediaType}
-              title={item.title}
-              className="pointer-events-auto"
-            />
-          </div>
         </div>
       </div>
     </article>

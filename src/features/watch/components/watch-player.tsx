@@ -26,6 +26,8 @@ interface WatchPlayerProps {
   startAt?: number;
   /** Where to go when the anime player finishes an episode with auto-next on. */
   nextHref?: string;
+  /** TV only: base URL for episodes, to follow the provider's own "next". */
+  watchPath?: string;
   children?: React.ReactNode;
 }
 
@@ -47,6 +49,7 @@ export function WatchPlayer({
   title,
   startAt,
   nextHref,
+  watchPath,
   children,
 }: WatchPlayerProps) {
   const router = useRouter();
@@ -79,6 +82,46 @@ export function WatchPlayer({
   const src = source.build(target, startAt, { autoplay: autoAdvanced });
   const isZoko = source.id === "zoko";
 
+  /*
+   * What the iframe actually shows. Normally that's `src`, but VidLink's
+   * player has its own "next episode" button, which moves on *inside* the
+   * iframe. We hear about it (its events carry season and episode), update
+   * the URL so the bar, picker and progress tracking follow, and then must
+   * NOT reload the iframe with the new `src`: it is already playing that
+   * episode. `adopted` remembers which episode the iframe moved to by itself.
+   */
+  const [frameSrc, setFrameSrc] = useState(src);
+  const adopted = useRef<string | null>(null);
+  const episodeKey = `${source.id}:${target.season}:${target.episode}`;
+  useEffect(() => {
+    if (adopted.current === episodeKey) return;
+    adopted.current = null;
+    setFrameSrc(src);
+  }, [src, episodeKey]);
+
+  useEffect(() => {
+    if (source.id !== "vidlink" || target.mediaType !== "tv" || !watchPath) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== source.progressOrigin) return;
+      const msg = event.data as
+        | { type?: string; data?: { mtmdbId?: number; season?: number; episode?: number } }
+        | undefined;
+      if (msg?.type !== "PLAYER_EVENT") return;
+      const season = Number(msg.data?.season);
+      const episode = Number(msg.data?.episode);
+      if (!Number.isInteger(season) || !Number.isInteger(episode)) return;
+      if (msg.data?.mtmdbId !== undefined && Number(msg.data.mtmdbId) !== target.tmdbId) return;
+      if (season === target.season && episode === target.episode) return;
+
+      const key = `${source.id}:${season}:${episode}`;
+      if (adopted.current === key) return; // already on its way
+      adopted.current = key;
+      router.replace(`${watchPath}?season=${season}&episode=${episode}`, { scroll: false });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [source.id, source.progressOrigin, target.mediaType, target.tmdbId, target.season, target.episode, watchPath, router]);
+
   // Reset load state whenever the stream changes — a new episode or source is
   // a fresh load, and the old "ready" state would hide the spinner wrongly.
   useEffect(() => {
@@ -86,7 +129,7 @@ export function WatchPlayer({
     setTimedOut(false);
     const timer = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [src]);
+  }, [frameSrc]);
 
   /*
    * The anime player's message protocol (every message has
@@ -162,7 +205,7 @@ export function WatchPlayer({
       >
         <iframe
           ref={frameRef}
-          src={src}
+          src={frameSrc}
           title={title}
           onLoad={() => setLoaded(true)}
           // The `*` allowlist matters: these providers nest another iframe
@@ -196,43 +239,48 @@ export function WatchPlayer({
       </div>
 
       {/* Controls sit outside the fullscreen wrapper so they never overlay
-          the picture. */}
+          the picture. Same segmented style as the tabs elsewhere. */}
       <div className="mx-auto mt-3 flex max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] flex-wrap items-center justify-between gap-3 px-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
-            Source
-          </span>
-          {sources.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setSourceId(s.id)}
-              aria-pressed={s.id === sourceId}
-              className={cn(
-                "rounded-full border px-3.5 py-1.5 text-xs font-medium transition",
-                s.id === sourceId
-                  ? "border-transparent bg-primary text-primary-foreground"
-                  : "border-white/[0.12] bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/[0.08] hover:text-white",
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div
+            role="group"
+            aria-label="Source"
+            className="flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1"
+          >
+            {sources.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSourceId(s.id)}
+                aria-pressed={s.id === sourceId}
+                className={cn(
+                  "rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors",
+                  s.id === sourceId
+                    ? "bg-primary text-primary-foreground"
+                    : "text-white/65 hover:text-white",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <p className="hidden min-w-0 text-[11px] text-white/40 lg:block">{source.hint}</p>
+        </div>
+
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={reload}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-white/70 transition hover:border-white/25 hover:text-white"
+            title="Reload this source"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-xs font-medium text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
           >
-            <RefreshCw className="h-3 w-3" aria-hidden />
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             Reload
           </button>
-        </div>
-
-        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={enterFullscreen}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-white/70 transition hover:border-white/25 hover:text-white"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-xs font-medium text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
           >
             <Maximize className="h-3.5 w-3.5" aria-hidden />
             Fullscreen
@@ -240,7 +288,8 @@ export function WatchPlayer({
         </div>
       </div>
 
-      <p className="mx-auto mt-2 max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] px-1 text-[11px] text-white/35">
+      {/* The hint drops under the row where there's no room beside it. */}
+      <p className="mx-auto mt-2 max-w-[min(1600px,calc((100vh-var(--watch-chrome))*16/9))] px-1 text-[11px] text-white/40 lg:hidden">
         {source.hint}
       </p>
 

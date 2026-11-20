@@ -3,10 +3,12 @@ import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { UserMenu } from "@/features/auth/components/user-menu";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getSession } from "@/server/session";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/metadata";
 
 import "./globals.css";
@@ -63,14 +65,18 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Shared with `UserMenu` through `getSession`'s per-request cache: one lookup.
+  const signedIn = Boolean((await getSession())?.user);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
+        <NavigationProgress />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -79,7 +85,9 @@ export default function RootLayout({
         >
           <QueryProvider>
             <TooltipProvider delayDuration={150}>
-              <AppShell userMenu={<UserMenu />}>{children}</AppShell>
+              <AppShell userMenu={<UserMenu />} signedIn={signedIn}>
+                {children}
+              </AppShell>
             </TooltipProvider>
           </QueryProvider>
         </ThemeProvider>

@@ -48,7 +48,7 @@ function Hero({ item }: { item: AnimeItem }) {
   ].filter(Boolean);
 
   return (
-    <section className="relative isolate overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#0b0b0b]">
+    <section className="relative isolate overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0b]">
       {item.banner ? (
         <Image
           src={item.banner}

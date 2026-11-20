@@ -89,6 +89,30 @@ export async function getWatchedEpisodes(tmdbId: number): Promise<string[]> {
   return rows.map((r) => `s${r.season}e${r.episode}`);
 }
 
+/**
+ * How far into each episode of one show the viewer got, keyed `s{n}e{n}`:
+ * 0..1, or null when the provider never reported a runtime (the episode
+ * counts as watched but has no bar). Empty when signed out.
+ */
+export async function getEpisodeProgress(
+  tmdbId: number,
+): Promise<Record<string, number | null>> {
+  const userId = await currentUserId();
+  if (!userId) return {};
+
+  const rows = await prisma.watchedItem.findMany({
+    where: { userId, tmdbId, mediaType: "tv" },
+    select: { season: true, episode: true, positionSeconds: true, runtimeSeconds: true },
+  });
+
+  return Object.fromEntries(
+    rows.map((r) => [
+      `s${r.season}e${r.episode}`,
+      r.runtimeSeconds > 0 ? Math.min(1, r.positionSeconds / r.runtimeSeconds) : null,
+    ]),
+  );
+}
+
 export type ContinueWatchingEntry = {
   tmdbId: number;
   mediaType: "movie" | "tv";

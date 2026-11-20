@@ -30,15 +30,16 @@
     --sidebar-border: 240 5.9% 90%;
     --sidebar-accent: 240 4.8% 95.9%;
 
-    /* Brand gradient — kept purple/pink for the existing sidebar + chrome. */
-    --brand-from: 271 91% 65%;
-    --brand-to: 330 81% 60%;
+    /* Brand accent: the logo's red, bright to deep. One accent colour across
+       the app; the old purple/pink pair read as a second, unrelated brand. */
+    --brand-from: 7 99% 53%;
+    --brand-to: 356 88% 38%;
   }
 
   .dark {
     /* Obsidian Cinema palette — Stitch "Cinematic Lux Streaming Landing". */
     --background: 0 0% 3.5%;                       /* #090909 */
-    --foreground: 18 10% 90%;                     /* #e5e2e1 on-surface */
+    --foreground: 0 0% 93%;
     --card: 0 0% 7.5%;                            /* #131313 surface */
     --card-foreground: 18 10% 90%;
     --popover: 0 0% 7.5%;
@@ -48,7 +49,7 @@
     --secondary: 263 91% 56%;                     /* #7c3aed secondary */
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 12%;                            /* #1f1f1f */
-    --muted-foreground: 18 25% 80%;               /* #e9bcb6 on-surface-variant */
+    --muted-foreground: 0 0% 62%;
     --accent: 217 95% 53%;                        /* #0873d2 tertiary */
     --accent-foreground: 0 0% 100%;
     --destructive: 7 99% 53%;
@@ -102,7 +103,7 @@
      plain 1px border can't do.
   */
   :root {
-    --card-radius: 24px; /* matches rounded-stitch-xl */
+    --card-radius: 14px;
   }
 
   /* Shape only — skeletons and other unbordered blocks. */
@@ -127,9 +128,9 @@
     );
     filter: drop-shadow(0 4px 10px hsl(0 0% 0% / 0.32));
     transition:
-      background 500ms cubic-bezier(0.16, 1, 0.3, 1),
-      filter 500ms cubic-bezier(0.16, 1, 0.3, 1),
-      transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+      background 250ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 250ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   /* Replaces `hover:primary-glow`. Cast as a filter rather than a box-shadow
@@ -140,10 +141,10 @@
       160deg,
       hsl(0 0% 100% / 0.3) 0%,
       hsl(0 0% 100% / 0.14) 38%,
-      rgb(229 9 20 / 0.35) 100%
+      hsl(0 0% 100% / 0.1) 100%
     );
-    filter: drop-shadow(0 6px 14px hsl(0 0% 0% / 0.4))
-      drop-shadow(0 8px 26px rgb(229 9 20 / 0.32));
+    /* A brighter edge and a deeper shadow; no coloured glow. */
+    filter: drop-shadow(0 10px 22px hsl(0 0% 0% / 0.55));
   }
 
   /* The card's real surface, inset by the width of the edge above. */
@@ -251,16 +252,9 @@
   }
 
   /* Brand gradient text */
+  /* Solid accent. Gradient-filled text was the loudest "template" tell. */
   .text-brand-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--brand-from)),
-      hsl(var(--brand-to))
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
+    color: hsl(var(--primary));
   }
 
   /* Brand gradient background */
@@ -335,11 +329,11 @@
   /* Reveal animation — opacity 0 → 1 + translateY 30px → 0.
      Paired with scroll-trigger via Tailwind animation utilities. */
   @keyframes reveal-up {
-    0% { opacity: 0; transform: translateY(30px); }
+    0% { opacity: 0; transform: translateY(10px); }
     100% { opacity: 1; transform: translateY(0); }
   }
   .reveal {
-    animation: reveal-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: reveal-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     animation-delay: var(--reveal-delay, 0ms);
     opacity: 0;
   }
@@ -382,6 +376,28 @@
     background: rgb(255 255 255 / 0.22);
   }
 
+  /* Surprise page: the pick's backdrop fades up behind the result. */
+  @keyframes backdrop-in {
+    from { opacity: 0; transform: scale(1.04); }
+    to { opacity: 0.45; transform: scale(1); }
+  }
+  .backdrop-in {
+    animation: backdrop-in 0.9s ease-out both;
+  }
+
+  /* Top-10 rank numerals: tall outlined digits the poster overlaps. Outline
+     only, so they read as part of the backdrop rather than as a badge. */
+  .rank-numeral {
+    /* Smaller on phones, where 11rem digits were wider than the posters. */
+    font-size: clamp(7.5rem, 22vw, 11rem);
+    font-weight: 900;
+    line-height: 0.8;
+    letter-spacing: -0.06em;
+    color: transparent;
+    -webkit-text-stroke: 2px hsl(0 0% 100% / 0.32);
+    user-select: none;
+  }
+
   /* Surprise page: the landed pick pops in, and wall tiles flash while the
      deck is shuffling. */
   @keyframes pick-pop {
@@ -394,6 +410,10 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .backdrop-in {
+      animation: none;
+      opacity: 0.45;
+    }
     .pick-pop,
     .reveal {
       animation: none;
@@ -435,4 +455,40 @@
   ::view-transition-new(*) {
     animation: none !important;
   }
+}
+
+/* Quiet, neutral scrollbars and selection instead of the browser defaults. */
+html {
+  scrollbar-color: hsl(0 0% 22%) transparent;
+}
+::selection {
+  background: hsl(var(--primary) / 0.35);
+  color: #fff;
+}
+
+/* Top-of-page navigation bar (components/layout/navigation-progress.tsx).
+   Races to ~90% quickly then crawls, so it always looks alive; "done" snaps
+   it to full width and fades it out. Transform-only, so it's compositor work. */
+@keyframes nav-progress {
+  0% { transform: scaleX(0); }
+  20% { transform: scaleX(0.45); }
+  60% { transform: scaleX(0.8); }
+  100% { transform: scaleX(0.94); }
+}
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  height: 2px;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+  transform-origin: left;
+  animation: nav-progress 8s cubic-bezier(0.1, 0.6, 0.2, 1) forwards;
+  pointer-events: none;
+}
+.nav-progress-done {
+  animation: none;
+  transform: scaleX(1);
+  opacity: 0;
+  transition: opacity 300ms ease-out 50ms;
 }

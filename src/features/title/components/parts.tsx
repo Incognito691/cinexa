@@ -1,8 +1,11 @@
 import Image from "next/image";
-import { Star } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Lock, Play, Star } from "lucide-react";
 
 import { MediaCard } from "@/components/media/media-card";
 import { tmdbImage } from "@/lib/env";
+import { cn } from "@/lib/utils";
+import { releaseLabel } from "@/lib/release";
 import type {
   CastMember,
   MediaCardItem,
@@ -31,10 +34,7 @@ export function Section({
   return (
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="h-5 w-1 rounded-full bg-primary" aria-hidden />
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        </div>
+        <h2 className="text-xl font-semibold tracking-tight text-white">{title}</h2>
         {action}
       </header>
       {children}
@@ -64,7 +64,7 @@ export function TitleHero({
   const rating = detail.rating > 0 ? (detail.rating / 2).toFixed(1) : null;
 
   return (
-    <header className="relative isolate min-h-[560px] overflow-hidden px-4 pb-10 pt-[22vh] sm:px-8 sm:pt-[26vh] lg:px-12">
+    <header className="relative isolate mt-2 min-h-[520px] overflow-hidden rounded-t-2xl px-4 pb-10 pt-[20vh] sm:px-8 sm:pt-[24vh] lg:px-12">
       {backdrop ? (
         <Image
           src={backdrop}
@@ -90,7 +90,7 @@ export function TitleHero({
       />
 
       <div className="flex flex-col gap-8 sm:flex-row sm:items-end">
-        <div className="relative aspect-[2/3] w-36 shrink-0 overflow-hidden rounded-2xl border border-white/[0.12] shadow-2xl shadow-black/60 sm:w-52">
+        <div className="relative aspect-[2/3] w-36 shrink-0 overflow-hidden rounded-xl border border-white/[0.12] shadow-2xl shadow-black/60 sm:w-48">
           {poster ? (
             <Image
               src={poster}
@@ -115,7 +115,7 @@ export function TitleHero({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/65">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 text-sm text-white/65">
             {rating ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-white">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -126,10 +126,8 @@ export function TitleHero({
               </span>
             ) : null}
             {facts.map((fact) => (
-              <span key={fact} className="inline-flex items-center gap-4">
-                <span aria-hidden className="text-white/20">
-                  /
-                </span>
+              <span key={fact} className="inline-flex items-center gap-2.5">
+                <span aria-hidden className="h-1 w-1 rounded-full bg-white/25" />
                 {fact}
               </span>
             ))}
@@ -140,7 +138,7 @@ export function TitleHero({
               {detail.genres.map((genre) => (
                 <li
                   key={genre}
-                  className="rounded-full border border-white/[0.12] bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-white/85 backdrop-blur-md"
+                  className="rounded-md bg-white/[0.08] px-2.5 py-1 text-xs font-medium text-white/80"
                 >
                   {genre}
                 </li>
@@ -291,3 +289,111 @@ export const formatDate = (iso: string | null) =>
         timeZone: "UTC",
       })
     : null;
+
+/**
+ * The hero's primary action: a Watch link, or a locked pill when the title
+ * isn't out, so an unreleased film never leads to an empty player.
+ */
+export function WatchAction({
+  href,
+  label,
+  locked,
+}: {
+  href: string;
+  label: string;
+  /** Set (even with a null date) when the title is unreleased. */
+  locked?: { releaseDate: string | null };
+}) {
+  if (locked) {
+    return (
+      <span
+        aria-disabled="true"
+        className="inline-flex h-12 cursor-not-allowed items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-6 text-sm font-semibold text-white/60"
+      >
+        <Lock className="h-4 w-4" aria-hidden />
+        Not released
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+    >
+      <Play className="h-4 w-4 fill-current" />
+      {label}
+    </Link>
+  );
+}
+
+/** "Not released" strip for the hero of a title that isn't out yet. */
+export function ReleaseBanner({ releaseDate }: { releaseDate: string | null }) {
+  const date = releaseLabel(releaseDate);
+  return (
+    <p className="inline-flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3.5 py-2 text-sm text-amber-100">
+      <Lock className="h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+      <span>
+        <span className="font-semibold">Not released yet.</span>{" "}
+        {date ? `Locked until it comes out on ${date}.` : "Locked until it comes out."}
+      </span>
+    </p>
+  );
+}
+
+export interface DetailRow {
+  label: string;
+  /** Rows with no value are dropped, so callers can pass everything. */
+  value: React.ReactNode;
+  tone?: "up" | "down";
+}
+
+/**
+ * The facts panel beside the overview: status, dates, money, as one quiet
+ * list. Replaces a row of three large stat boxes, which gave budget and
+ * revenue more weight than the film itself. Sticks while the column scrolls.
+ */
+export function DetailsCard({ rows, homepage }: { rows: DetailRow[]; homepage?: string | null }) {
+  const shown = rows.filter((row) => row.value !== null && row.value !== undefined && row.value !== "");
+  if (shown.length === 0 && !homepage) return null;
+  return (
+    <aside className="h-fit rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 lg:sticky lg:top-24">
+      <h2 className="text-sm font-semibold text-white">Details</h2>
+      <dl className="mt-2 divide-y divide-white/[0.06]">
+        {shown.map((row) => (
+          <div key={row.label} className="flex items-baseline justify-between gap-4 py-2.5 text-sm">
+            <dt className="shrink-0 text-white/50">{row.label}</dt>
+            <dd
+              className={cn(
+                "text-right font-medium tabular-nums",
+                row.tone === "up" ? "text-emerald-400" : row.tone === "down" ? "text-rose-400" : "text-white/90",
+              )}
+            >
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {homepage ? (
+        <a
+          href={homepage}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-white/[0.1] bg-white/[0.04] text-sm font-medium text-white/85 transition-colors hover:bg-white/[0.08] hover:text-white"
+        >
+          Official site
+          <ArrowUpRight className="h-4 w-4" aria-hidden />
+        </a>
+      ) : null}
+    </aside>
+  );
+}
+
+/** Two columns on wide screens: the reading column and the facts panel. */
+export function DetailColumns({ main, aside }: { main: React.ReactNode; aside: React.ReactNode }) {
+  return (
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0 space-y-12">{main}</div>
+      {aside}
+    </div>
+  );
+}

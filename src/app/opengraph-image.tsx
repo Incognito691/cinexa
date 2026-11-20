@@ -25,9 +25,8 @@ export default function OpengraphImage() {
           justifyContent: "center",
           background: "#090909",
           padding: 80,
-          // Matches the app shell's ambient purple/pink radial backdrop.
           backgroundImage:
-            "radial-gradient(60% 55% at 15% 0%, rgba(168,85,247,0.45), transparent 70%), radial-gradient(55% 50% at 85% 10%, rgba(236,72,153,0.4), transparent 70%)",
+            "radial-gradient(60% 55% at 85% 0%, rgba(229,9,20,0.28), transparent 70%)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>

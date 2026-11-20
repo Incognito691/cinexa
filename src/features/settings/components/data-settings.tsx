@@ -2,23 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Folder, Heart, History, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { clearCollection, clearFavourites } from "@/server/library";
 import { clearWatchHistory } from "@/server/watch-history";
 
-import { SettingsRow, SettingsSection } from "./settings-shell";
-
 /**
- * The destructive section.
+ * What's stored against the account, as three tiles: a count and a way to
+ * clear it.
  *
- * Every action here is irreversible and none of it is recoverable from a
- * backup the user controls, so each one is **two-step**: the button arms, then
- * has to be confirmed. That's the whole reason this isn't just three buttons —
- * a mis-click next to "Clear watch history" costs real data.
- *
- * Counts are rendered on the button label rather than in the hint so the
- * confirm step states exactly how much is about to go.
+ * Clearing is irreversible, so each one is **two-step**: the button arms,
+ * then has to be confirmed, and the confirm button states exactly how much is
+ * about to go. A mis-click next to "Clear" would otherwise cost real data.
  */
 
 interface DataSettingsProps {
@@ -43,13 +39,20 @@ export function DataSettings({ counts, signedIn }: DataSettingsProps) {
       router.refresh();
     });
 
-  const actions = [
+  const tiles: {
+    id: string;
+    label: string;
+    hint: string;
+    count: number;
+    Icon: LucideIcon;
+    action: () => Promise<unknown>;
+  }[] = [
     {
       id: "history",
       label: "Watch history",
-      hint: "Everything you've opened or ticked as watched. Clearing this also empties Continue Watching.",
+      hint: "Clearing also empties Continue Watching.",
       count: counts.watched,
-      noun: counts.watched === 1 ? "entry" : "entries",
+      Icon: History,
       action: clearWatchHistory,
     },
     {
@@ -57,76 +60,75 @@ export function DataSettings({ counts, signedIn }: DataSettingsProps) {
       label: "Favourites",
       hint: "Every title you've hearted.",
       count: counts.favourites,
-      noun: counts.favourites === 1 ? "title" : "titles",
+      Icon: Heart,
       action: clearFavourites,
     },
     {
       id: "collection",
       label: "Collection",
-      hint: "Every saved title and every folder you've made. Folders go too — this one isn't the same as deleting a folder from Manage, which keeps its titles.",
+      hint: "Saved titles and all your folders.",
       count: counts.collected,
-      noun: counts.collected === 1 ? "title" : "titles",
+      Icon: Folder,
       action: clearCollection,
     },
-  ] as const;
+  ];
 
   return (
-    <SettingsSection
-      title="Your data"
-      description={
-        signedIn
-          ? "Stored against your account. Clearing is immediate and can't be undone."
-          : "Sign in to see and manage what's stored against your account."
-      }
-    >
-      {actions.map((item) => {
-        const isArmed = armed === item.id;
-        const empty = item.count === 0;
+    <section className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-white">Your data</h2>
+        <p className="text-sm text-white/50">
+          {signedIn
+            ? "Saved with your account. Clearing is immediate and can't be undone."
+            : "Sign in to save your history, favourites and collection."}
+        </p>
+      </div>
 
-        return (
-          <SettingsRow
-            key={item.id}
-            label={item.label}
-            hint={item.hint}
-            control={
-              !signedIn || empty ? (
-                <span className="text-xs text-white/30">
-                  {signedIn ? "Nothing stored" : "—"}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {tiles.map(({ id, label, hint, count, Icon, action }) => {
+          const isArmed = armed === id;
+          return (
+            <div
+              key={id}
+              className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4"
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] text-white/70">
+                  <Icon className="h-4 w-4" aria-hidden />
                 </span>
-              ) : isArmed ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={pending}
-                    onClick={() => run(item.action)}
-                  >
-                    {pending
-                      ? "Clearing…"
-                      : `Delete ${item.count} ${item.noun}`}
+                <span className="text-3xl font-bold tabular-nums tracking-tight text-white">
+                  {signedIn ? count.toLocaleString() : "–"}
+                </span>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold text-white">{label}</p>
+                <p className="text-xs leading-relaxed text-white/50">{hint}</p>
+              </div>
+
+              <div className="mt-auto flex min-h-9 items-center gap-2">
+                {!signedIn || count === 0 ? (
+                  <span className="text-xs text-white/35">
+                    {signedIn ? "Nothing saved yet" : "Not signed in"}
+                  </span>
+                ) : isArmed ? (
+                  <>
+                    <Button variant="destructive" size="sm" disabled={pending} onClick={() => run(action)}>
+                      {pending ? "Clearing…" : `Delete all ${count.toLocaleString()}`}
+                    </Button>
+                    <Button variant="ghost" size="sm" disabled={pending} onClick={() => setArmed(null)}>
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="secondary" size="sm" onClick={() => setArmed(id)}>
+                    Clear
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={pending}
-                    onClick={() => setArmed(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setArmed(item.id)}
-                >
-                  Clear {item.count}
-                </Button>
-              )
-            }
-          />
-        );
-      })}
-    </SettingsSection>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

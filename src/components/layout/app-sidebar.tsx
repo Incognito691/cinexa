@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChevronsLeft,
-  ChevronsRight,
+  ChevronLeft,
   Compass,
   Download,
   Folder,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { LogoMark, Wordmark } from "@/components/brand/logo";
+import { SignOutConfirm } from "@/features/auth/components/sign-out-confirm";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -36,6 +36,8 @@ import {
 
 interface SidebarContentProps {
   expanded: boolean;
+  /** Logout is only offered to someone who is signed in. */
+  signedIn?: boolean;
   onToggle: () => void;
   onNavigate?: () => void;
 }
@@ -53,25 +55,27 @@ function NavRow({ item, expanded, onNavigate }: NavRowProps) {
 
   const active = hasHref && pathname
     ? pathname === item.href ||
-      (!!item.href && item.href !== "/" && pathname.startsWith(item.href))
+      (!!item.href && item.href !== "/" && pathname.startsWith(item.href)) ||
+      (item.match?.some((prefix) => pathname.startsWith(prefix)) ?? false)
     : false;
 
-  // Reference style: active = purple text only, no background, no left bar.
+  // Active = the icon alone, in a deep maroon-red. No pill, no bar.
   const iconClass = cn(
     "h-[18px] w-[18px] shrink-0 transition-colors",
     active
-      ? "text-brand-from"
+      ? "text-[#c22a3a]"
       : "text-muted-foreground group-hover:text-foreground",
   );
 
   const labelClass = cn(
     "flex-1 truncate text-[13.5px] font-medium transition-colors",
-    active ? "text-brand-from" : "text-foreground/80 group-hover:text-foreground",
+    active ? "text-white" : "text-foreground/80 group-hover:text-foreground",
   );
 
   const rowClass = cn(
     "group relative flex h-10 items-center gap-3 rounded-lg px-2.5 transition-colors",
     expanded ? "whitespace-nowrap" : "justify-center px-0",
+    "hover:bg-white/[0.04]",
   );
 
   const content = (
@@ -111,6 +115,7 @@ function NavRow({ item, expanded, onNavigate }: NavRowProps) {
   return (
     <Link
       href={item.href!}
+      aria-current={active ? "page" : undefined}
       aria-label={item.label}
       title={!expanded ? item.label : undefined}
       onClick={onNavigate}
@@ -170,18 +175,14 @@ function Divider() {
   return <div aria-hidden className="my-3 h-px w-full bg-white/[0.06]" />;
 }
 
-export function SidebarContent({
-  expanded,
-  onToggle,
-  onNavigate,
-}: SidebarContentProps) {
+export function SidebarContent({ expanded, signedIn = false, onNavigate }: SidebarContentProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Logo + collapse toggle */}
       <div
         className={cn(
           "flex h-16 items-center px-4",
-          expanded ? "justify-between" : "justify-center",
+          expanded ? "justify-start" : "justify-center",
         )}
       >
         <Link
@@ -197,16 +198,6 @@ export function SidebarContent({
           <LogoMark className="h-9 w-9" />
           {expanded ? <Wordmark className="text-[22px]" /> : null}
         </Link>
-        {expanded ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Collapse sidebar"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-white/[0.04] hover:text-foreground"
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </button>
-        ) : null}
       </div>
 
       {/* Nav scroll area */}
@@ -230,23 +221,24 @@ export function SidebarContent({
             expanded={expanded}
             onNavigate={onNavigate}
           />
-          <NavList
-            items={logoutNav}
-            expanded={expanded}
-            onNavigate={onNavigate}
-          />
+          {signedIn ? (
+            <SignOutConfirm
+              label="Log out"
+              title={expanded ? undefined : "Log out"}
+              className={cn(
+                "group flex h-10 w-full items-center gap-3 rounded-lg px-2.5 transition-colors hover:bg-white/[0.04]",
+                expanded ? "whitespace-nowrap" : "justify-center px-0",
+              )}
+            >
+              <LogOut className="h-[18px] w-[18px] shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+              {expanded ? (
+                <span className="flex-1 truncate text-left text-[13.5px] font-medium text-foreground/80 group-hover:text-foreground">
+                  Logout
+                </span>
+              ) : null}
+            </SignOutConfirm>
+          ) : null}
         </div>
-
-        {!expanded ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label="Expand sidebar"
-            className="mt-3 flex h-10 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-white/[0.04] hover:text-foreground"
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </button>
-        ) : null}
       </nav>
     </div>
   );
@@ -254,10 +246,11 @@ export function SidebarContent({
 
 interface AppSidebarProps {
   expanded: boolean;
+  signedIn?: boolean;
   onToggle: () => void;
 }
 
-export function AppSidebar({ expanded, onToggle }: AppSidebarProps) {
+export function AppSidebar({ expanded, signedIn, onToggle }: AppSidebarProps) {
   return (
     <TooltipProvider delayDuration={150}>
       {/* Floating glass card — fixed so it never scrolls with content. */}
@@ -274,8 +267,27 @@ export function AppSidebar({ expanded, onToggle }: AppSidebarProps) {
             "shadow-[inset_1px_0_0_0_rgba(255,255,255,0.04),0_8px_30px_-12px_rgba(0,0,0,0.5)] overflow-hidden",
           )}
         >
-          <SidebarContent expanded={expanded} onToggle={onToggle} />
+          <SidebarContent expanded={expanded} signedIn={signedIn} onToggle={onToggle} />
         </div>
+
+        {/* One toggle for both states: a small handle on the sidebar's edge,
+            level with the logo. It rides the edge as the width animates and
+            the chevron flips, so the control never jumps between the top
+            (expanded) and the bottom (collapsed) as it used to. A sibling of
+            the panel because the panel clips its overflow. */}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          aria-expanded={expanded}
+          // From 1024px only: below that the sidebar is always the icon rail.
+          className="absolute -right-3 top-[22px] hidden h-6 w-6 items-center lg:flex justify-center rounded-full border border-white/[0.12] bg-[#161616] text-white/60 shadow-md shadow-black/50 transition-colors hover:border-white/25 hover:bg-[#1f1f1f] hover:text-white"
+        >
+          <ChevronLeft
+            className={cn("h-3.5 w-3.5 transition-transform duration-300", !expanded && "rotate-180")}
+            aria-hidden
+          />
+        </button>
       </aside>
     </TooltipProvider>
   );

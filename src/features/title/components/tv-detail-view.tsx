@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ArrowUpRight, Play } from "lucide-react";
+
+import { ArrowUpRight } from "lucide-react";
 
 import { LibraryButton } from "@/features/library";
 import { cn } from "@/lib/utils";
+import { isUnreleasedTitle } from "@/lib/release";
 import type { NextAiring, TvPage } from "@/types/media";
 
 import { cutAtNextEpisode } from "../lib/airing";
@@ -11,9 +13,11 @@ import {
   CastRail,
   CompanyRow,
   Overview,
+  ReleaseBanner,
   Section,
   SimilarGrid,
   TitleHero,
+  WatchAction,
   formatRuntime,
 } from "./parts";
 import { TrailerDialog } from "./trailer-dialog";
@@ -74,20 +78,22 @@ export function TvDetailView({
     firstEpisode?.episodeNumber ?? 1
   }`;
 
+  const locked = isUnreleasedTitle(detail) ? { releaseDate: detail.releaseDate } : undefined;
+
+  const networks = detail.networks.map((n) => n.name).slice(0, 3).join(", ");
+
   return (
-    <article className="-mx-1 sm:-mx-3 lg:-mx-4">
+    <article className="mx-auto w-full max-w-[1560px]">
       <TitleHero
         detail={detail}
         facts={facts}
         actions={
           <>
-            <Link
+            <WatchAction
               href={watchHref}
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:opacity-90"
-            >
-              <Play className="h-4 w-4 fill-current" />
-              Watch S{selectedSeason} E{firstEpisode?.episodeNumber ?? 1}
-            </Link>
+              label={`Watch S${selectedSeason} E${firstEpisode?.episodeNumber ?? 1}`}
+              locked={locked}
+            />
             {trailer ? (
               <TrailerDialog youtubeKey={trailer.key} title={detail.title} />
             ) : null}
@@ -96,18 +102,19 @@ export function TvDetailView({
               tmdbId={detail.id}
               mediaType="tv"
               title={detail.title}
-              variant="pill"
+              className="h-12 w-12 rounded-xl"
             />
             <LibraryButton
               kind="collected"
               tmdbId={detail.id}
               mediaType="tv"
               title={detail.title}
-              variant="pill"
+              className="h-12 w-12 rounded-xl"
             />
           </>
         }
       >
+        {locked ? <ReleaseBanner releaseDate={locked.releaseDate} /> : null}
         {detail.creators.length > 0 ? (
           <p className="text-sm text-white/55">
             Created by{" "}
@@ -116,20 +123,42 @@ export function TvDetailView({
         ) : null}
       </TitleHero>
 
-      <div className="space-y-14 px-4 pb-16 sm:px-8 lg:px-12">
-        <Overview text={detail.overview} />
+      <div className="space-y-12 px-4 pb-16 sm:px-8 lg:px-12">
+        {/* No facts panel or strip here: years, seasons, episode count,
+            length and status are already in the line under the title, and
+            repeating them in boxes was clutter. Only what that line lacks
+            follows the overview. */}
+        <div className="space-y-4">
+          <Overview text={detail.overview} />
+          {networks || detail.homepage ? (
+            <p className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-white/55">
+              {networks ? (
+                <span>
+                  Network <span className="font-medium text-white/85">{networks}</span>
+                </span>
+              ) : null}
+              {detail.homepage ? (
+                <a
+                  href={detail.homepage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-medium text-white/70 underline-offset-4 transition-colors hover:text-white hover:underline"
+                >
+                  Official site
+                  <ArrowUpRight className="h-4 w-4" aria-hidden />
+                </a>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
 
         {seasons.length > 0 ? (
-          <Section
-            title="Episodes"
-            action={
-              <SeasonPicker
-                seasons={seasons}
-                selected={selectedSeason}
-                basePath={basePath ?? `/tv/${detail.id}`}
-              />
-            }
-          >
+          <Section title="Episodes">
+            <SeasonPicker
+              seasons={seasons}
+              selected={selectedSeason}
+              basePath={basePath ?? `/tv/${detail.id}`}
+            />
             {episodes.length > 0 ? (
               <EpisodeList cut={cutAtNextEpisode(episodes, nextAiring)} watchPath={playPath} />
             ) : (
@@ -143,18 +172,6 @@ export function TvDetailView({
         <CastRail cast={cast} />
         <CompanyRow title="Networks" companies={detail.networks} />
         <CompanyRow title="Production" companies={detail.productionCompanies} />
-
-        {detail.homepage ? (
-          <a
-            href={detail.homepage}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-from transition hover:opacity-80"
-          >
-            Official site
-            <ArrowUpRight className="h-4 w-4" />
-          </a>
-        ) : null}
 
         <SimilarGrid items={similar} title="More shows like this" />
       </div>
@@ -180,31 +197,29 @@ function SeasonPicker({
 }) {
   if (seasons.length <= 1) return null;
 
+  // Plain text tabs on a hairline, the active one underlined in red. A boxed
+  // bar of long season names ("Phantom Blood & Battle Tendency") was heavy,
+  // and squeezed beside the heading it had nowhere to go.
   return (
-    <nav aria-label="Seasons" className="max-w-full">
-      <ul className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+    <nav aria-label="Seasons" className="border-b border-white/[0.08]">
+      <ul className="-mb-px flex gap-6 overflow-x-auto scrollbar-hide">
         {seasons.map((season) => {
           const active = season.seasonNumber === selected;
           return (
-            <li key={season.seasonNumber}>
+            <li key={season.seasonNumber} className="shrink-0">
               <Link
                 href={`${basePath}?season=${season.seasonNumber}`}
                 scroll={false}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "block whitespace-nowrap rounded-full border px-4 py-1.5 text-xs font-medium transition",
+                  "block whitespace-nowrap border-b-2 pb-3 pt-1 text-sm font-medium transition-colors",
                   active
-                    ? "border-transparent bg-primary text-primary-foreground"
-                    : "border-white/[0.12] bg-white/[0.04] text-white/70 hover:border-white/25 hover:bg-white/[0.08] hover:text-white",
+                    ? "border-primary text-white"
+                    : "border-transparent text-white/50 hover:text-white",
                 )}
               >
                 {season.name}
-                <span
-                  className={cn(
-                    "ml-2",
-                    active ? "text-primary-foreground/70" : "text-white/40",
-                  )}
-                >
+                <span className={cn("ml-1.5 text-xs", active ? "text-white/50" : "text-white/30")}>
                   {season.episodeCount}
                 </span>
               </Link>

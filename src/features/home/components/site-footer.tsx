@@ -1,16 +1,14 @@
 import Link from "next/link";
-import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
-
 import { LogoMark, Wordmark } from "@/components/brand/logo";
 
 const footerColumns = [
   {
     title: "Browse",
     links: [
-      { label: "Home", href: "/" },
-      { label: "Movies", href: "/explore?tab=movies" },
-      { label: "TV Shows", href: "/explore?tab=tv" },
-      { label: "Continue Watching", href: "/continue-watching" },
+      { label: "Movies", href: "/movies" },
+      { label: "TV Shows", href: "/tv-shows" },
+      { label: "Anime", href: "/anime" },
+      { label: "Explore", href: "/explore" },
     ],
   },
   {
@@ -18,35 +16,26 @@ const footerColumns = [
     links: [
       { label: "Favourites", href: "/favourites" },
       { label: "My Collections", href: "/my-collection" },
-      { label: "Genres", href: "/explore" },
-      { label: "Trending", href: "/explore?tab=movies&category=popular" },
+      { label: "Continue Watching", href: "/continue-watching" },
+      { label: "Surprise me", href: "/surprise" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "About", href: "/support" },
+      { label: "About", href: "/about" },
       { label: "Support", href: "/support" },
-      { label: "Privacy", href: "/support" },
-      { label: "Terms", href: "/support" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
     ],
   },
-];
-
-const socials = [
-  { label: "Twitter", href: "https://twitter.com", icon: Twitter },
-  { label: "Facebook", href: "https://facebook.com", icon: Facebook },
-  { label: "Instagram", href: "https://instagram.com", icon: Instagram },
-  { label: "YouTube", href: "https://youtube.com", icon: Youtube },
 ];
 
 /**
  * Minimal Stitch-style footer.
  *
  * 4-column grid on desktop: brand + tagline | Browse | Library | Company.
- * Soft hairline divider + © row at the bottom. The brand mark keeps the
- *   purple/pink gradient because the user explicitly asked to keep the
- *   sidebar's identity — the rest of the page follows the Stitch red theme.
+ * Soft hairline divider + © row at the bottom.
  */
 export function SiteFooter() {
   return (
@@ -63,20 +52,6 @@ export function SiteFooter() {
             of cinema.
           </p>
 
-          <div className="flex items-center gap-2">
-            {socials.map(({ label, href, icon: Icon }) => (
-              <a
-                key={label}
-                href={href}
-                aria-label={label}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/70 backdrop-blur transition hover:border-white/[0.18] hover:bg-white/[0.08] hover:text-white"
-              >
-                <Icon className="h-4 w-4" />
-              </a>
-            ))}
-          </div>
         </div>
 
         {/* Link columns */}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 import { cn } from "@/lib/utils";
@@ -10,6 +10,13 @@ import type { TvEpisode, TvSeasonSummary, UpcomingEpisode } from "@/types/media"
 
 import { EpisodePicker } from "./episode-picker";
 import { AUTO_MARK_MS } from "./watch-tracker";
+
+/** A Prev/Next target, resolved on the server (it can cross seasons). */
+export interface EpisodeStep {
+  href: string;
+  /** e.g. "E4 · Phantom Traveler" or "Season 2 · Episode 1". */
+  label: string;
+}
 
 interface EpisodeNavProps {
   tmdbId: number;
@@ -21,8 +28,11 @@ interface EpisodeNavProps {
   upcoming?: UpcomingEpisode | null;
   season: number;
   episode: number;
+  prev: EpisodeStep | null;
+  next: EpisodeStep | null;
   /** `s{n}e{n}` keys already watched. */
   watchedKeys: string[];
+  progress: Record<string, number | null>;
   /** Server-resolved: hide the watched control entirely when signed out. */
   signedIn: boolean;
 }
@@ -47,10 +57,12 @@ export function EpisodeNav({
   upcoming,
   season,
   episode,
+  prev,
+  next,
   watchedKeys,
+  progress,
   signedIn,
 }: EpisodeNavProps) {
-  const router = useRouter();
   const watched = new Set(watchedKeys);
   const isCurrentWatched = watched.has(`s${season}e${episode}`);
 
@@ -73,17 +85,6 @@ export function EpisodeNav({
     return () => clearTimeout(timer);
   }, [signedIn, isWatched, tmdbId, season, episode]);
 
-  const index = episodes.findIndex((e) => e.episodeNumber === episode);
-  const prev = index > 0 ? episodes[index - 1] : undefined;
-  const next =
-    index >= 0 && index < episodes.length - 1 ? episodes[index + 1] : undefined;
-
-  const go = (episodeNumber: number) =>
-    router.push(`${watchPath}?season=${season}&episode=${episodeNumber}`);
-
-  const stepClass =
-    "inline-flex h-11 shrink-0 items-center rounded-xl px-3.5 text-xs font-medium text-white/65 transition hover:bg-white/[0.06] hover:text-white disabled:pointer-events-none disabled:opacity-25";
-
   return (
     <div className="flex w-full min-w-0 items-center gap-1">
       <EpisodePicker
@@ -94,26 +95,11 @@ export function EpisodeNav({
         season={season}
         episode={episode}
         watched={watched}
+        progress={progress}
       />
 
-      <button
-        type="button"
-        disabled={!prev}
-        title={prev ? `E${prev.episodeNumber} · ${prev.name}` : undefined}
-        onClick={() => prev && go(prev.episodeNumber)}
-        className={stepClass}
-      >
-        Prev
-      </button>
-      <button
-        type="button"
-        disabled={!next}
-        title={next ? `E${next.episodeNumber} · ${next.name}` : undefined}
-        onClick={() => next && go(next.episodeNumber)}
-        className={stepClass}
-      >
-        Next
-      </button>
+      <Step step={prev} direction="prev" />
+      <Step step={next} direction="next" />
 
       {signedIn ? (
         <button
@@ -156,5 +142,39 @@ export function EpisodeNav({
         </button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Prev / Next. Real links rather than `router.push` buttons, so Next.js
+ * prefetches the neighbouring episode and the switch is near-instant; and
+ * they work with middle-click and "open in new tab".
+ */
+function Step({ step, direction }: { step: EpisodeStep | null; direction: "prev" | "next" }) {
+  const isNext = direction === "next";
+  const className = cn(
+    "inline-flex h-10 shrink-0 items-center gap-1 rounded-xl text-xs font-medium transition",
+    isNext ? "px-2.5 sm:pl-3.5" : "px-2.5 sm:pr-3.5",
+    !step
+      ? "pointer-events-none text-white/20"
+      : isNext
+        ? "bg-white/[0.08] text-white hover:bg-white/[0.14]"
+        : "text-white/65 hover:bg-white/[0.06] hover:text-white",
+  );
+  const content = (
+    <>
+      {isNext ? null : <ChevronLeft className="h-4 w-4" aria-hidden />}
+      <span className="hidden sm:inline">{isNext ? "Next" : "Prev"}</span>
+      {isNext ? <ChevronRight className="h-4 w-4" aria-hidden /> : null}
+    </>
+  );
+  return step ? (
+    <Link href={step.href} title={step.label} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <span aria-disabled="true" className={className}>
+      {content}
+    </span>
   );
 }

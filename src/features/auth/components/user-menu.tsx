@@ -1,7 +1,8 @@
 import Image from "next/image";
 import { LogIn } from "lucide-react";
 
-import { auth, signIn } from "@/auth";
+import { signIn } from "@/auth";
+import { getSession } from "@/server/session";
 import { authConfigured } from "@/lib/env";
 
 /**
@@ -18,7 +19,7 @@ import { authConfigured } from "@/lib/env";
 export async function UserMenu() {
   if (!authConfigured()) return null;
 
-  const session = await auth().catch(() => null);
+  const session = await getSession();
   const user = session?.user;
 
   if (!user) {
@@ -31,7 +32,9 @@ export async function UserMenu() {
       >
         <button
           type="submit"
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 text-sm font-medium text-foreground/85 backdrop-blur-md transition hover:bg-white/[0.1] hover:text-foreground"
+          // Solid white: the one bright control in the bar, without competing
+          // with the red primary actions on the page below it.
+          className="inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black transition hover:bg-white/85 active:scale-[0.98]"
         >
           <LogIn className="h-4 w-4" aria-hidden />
           Sign in

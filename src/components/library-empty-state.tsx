@@ -49,14 +49,14 @@ export async function LibraryEmptyState({
 
   return (
     <section
-      className="relative grid min-h-[440px] items-center gap-10 overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#0b0b0b] p-8 sm:p-12 md:grid-cols-[1.1fr_1fr]"
+      className="relative grid min-h-[440px] items-center gap-10 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0b0b0b] p-8 sm:p-12 md:grid-cols-[1.1fr_1fr]"
       style={{
         backgroundImage:
           "radial-gradient(circle at 85% 30%, rgb(229 9 20 / 0.16), transparent 50%), radial-gradient(circle at 0% 100%, hsl(var(--brand-from) / 0.14), transparent 45%)",
       }}
     >
       <div className="relative z-10 space-y-6">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gradient shadow-lg shadow-fuchsia-500/25">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gradient shadow-lg shadow-primary/25">
           <Icon className="h-7 w-7 text-white" aria-hidden />
         </span>
 

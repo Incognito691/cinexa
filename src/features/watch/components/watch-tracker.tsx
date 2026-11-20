@@ -102,7 +102,7 @@ export function WatchTracker({
             channel?: string;
             currentTime?: number;
             duration?: number;
-            data?: { currentTime?: number; duration?: number };
+            data?: { currentTime?: number; duration?: number; season?: number; episode?: number };
           }
         | undefined;
       const position =
@@ -112,6 +112,18 @@ export function WatchTracker({
             ? data
             : null;
       if (!position) return;
+
+      // VidLink can move to the next episode inside its own player. Until the
+      // page has followed it, its positions belong to another episode and
+      // would overwrite this one's.
+      const reported = data?.type === "PLAYER_EVENT" ? data.data : undefined;
+      if (
+        mediaType === "tv" &&
+        reported?.episode !== undefined &&
+        (Number(reported.season) !== season || Number(reported.episode) !== episode)
+      ) {
+        return;
+      }
 
       const currentTime = Number(position.currentTime);
       const duration = Number(position.duration);

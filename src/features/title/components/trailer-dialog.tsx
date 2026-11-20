@@ -35,7 +35,7 @@ export function TrailerDialog({
       <button
         type="button"
         onClick={show}
-        className="inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/[0.06] px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:border-white/25 hover:bg-white/[0.12]"
+        className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/[0.14] bg-white/[0.06] px-5 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/[0.12]"
       >
         <Play className="h-4 w-4" />
         Watch Trailer

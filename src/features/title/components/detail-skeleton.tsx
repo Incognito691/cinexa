@@ -29,12 +29,12 @@ function Bar({ className }: { className?: string }) {
 
 export function DetailSkeleton({ tv = false }: { tv?: boolean }) {
   return (
-    <article className="-mx-1 sm:-mx-3 lg:-mx-4" aria-busy>
+    <article className="mx-auto w-full max-w-[1560px]" aria-busy>
       <span className="sr-only">Loading title…</span>
 
       {/* Hero — same min-height and top padding as the real one, so nothing
           shifts vertically when the content arrives. */}
-      <header className="relative isolate min-h-[560px] overflow-hidden px-4 pb-10 pt-[22vh] sm:px-8 sm:pt-[26vh] lg:px-12">
+      <header className="relative isolate mt-2 min-h-[520px] overflow-hidden rounded-t-2xl px-4 pb-10 pt-[20vh] sm:px-8 sm:pt-[24vh] lg:px-12">
         <div
           aria-hidden
           className="absolute inset-0 -z-10 bg-gradient-to-b from-white/[0.04] to-transparent"

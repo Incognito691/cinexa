@@ -13,8 +13,8 @@ import type { TvEpisode } from "@/types/media";
 import type { EpisodeAiring, EpisodeCut } from "../lib/airing";
 import { formatDate, formatRuntime } from "./parts";
 
-/** Episodes shown before the rest collapse behind "Show more". */
-const EPISODE_LIMIT = 3;
+/** Episodes shown before the rest collapse behind "Show more": two rows of four. */
+const EPISODE_LIMIT = 8;
 
 /**
  * Episode list, capped until the viewer asks for the rest.
@@ -53,8 +53,10 @@ export function EpisodeList({
   };
 
   return (
-    <div className="space-y-3">
-      <ol className="space-y-2">
+    <div className="space-y-4">
+      {/* A grid of cards rather than a list of rows: a season reads as a set
+          of stills, and eight fit where three rows did. */}
+      <ol className="grid gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {visible.map((episode) => (
           <EpisodeCard
             key={episode.id}
@@ -70,7 +72,7 @@ export function EpisodeList({
           type="button"
           onClick={toggle}
           aria-expanded={expanded}
-          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] py-3 text-xs font-medium text-white/70 transition hover:border-white/[0.18] hover:bg-white/[0.08] hover:text-white"
+          className="mx-auto flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-5 py-2.5 text-xs font-medium text-white/70 transition hover:border-white/[0.18] hover:bg-white/[0.08] hover:text-white"
         >
           {expanded
             ? "Show fewer episodes"
@@ -119,7 +121,12 @@ function EpisodeCard({
             : `${watchPath}?season=${episode.seasonNumber}&episode=${episode.episodeNumber}`
         }
       >
-        <div className="relative aspect-video w-32 shrink-0 overflow-hidden rounded-xl bg-white/[0.05] sm:w-44">
+        <div
+          className={cn(
+            "relative aspect-video w-full overflow-hidden rounded-xl bg-white/[0.05] ring-1 ring-white/[0.08] transition group-hover:ring-white/25",
+            airing && "opacity-60",
+          )}
+        >
           {still ? (
             <Image
               src={still}
@@ -128,22 +135,29 @@ function EpisodeCard({
               // TMDB's w300 is already the right size. Through the optimizer,
               // "Show more" queued a dozen at once and some came back broken.
               unoptimized
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
           ) : null}
+          <span className="absolute left-2 top-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+            E{episode.episodeNumber}
+          </span>
+          {episode.runtime && !airing ? (
+            <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white/85">
+              {formatRuntime(episode.runtime)}
+            </span>
+          ) : null}
           {airing ? null : (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-              <Play className="h-6 w-6 fill-white text-white" />
+            <span className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white">
+                <Play className="h-4 w-4 fill-current" />
+              </span>
             </span>
           )}
         </div>
 
-        <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
+        <div className="space-y-1 px-0.5">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="min-w-0 text-sm font-semibold text-white">
-              <span className="text-white/40">{episode.episodeNumber}. </span>
-              {episode.name}
-            </h3>
+            <h3 className="line-clamp-1 min-w-0 text-sm font-semibold text-white">{episode.name}</h3>
             {rating ? (
               <span className="inline-flex shrink-0 items-center gap-1 text-xs text-white/60">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -152,21 +166,14 @@ function EpisodeCard({
             ) : null}
           </div>
 
-          <p className="flex flex-wrap items-center gap-x-2 text-[11px] text-white/45">
-            {aired ? <span>{aired}</span> : null}
-            {episode.runtime && !airing ? (
-              <>
-                <span aria-hidden>·</span>
-                <span>{formatRuntime(episode.runtime)}</span>
-              </>
-            ) : null}
-            {airing ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-medium text-white/85">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                Airs <AiringTime at={airing.at} mode={airing.mode} />
-              </span>
-            ) : null}
-          </p>
+          {airing ? (
+            <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/80">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+              Airs <AiringTime at={airing.at} mode={airing.mode} />
+            </p>
+          ) : aired ? (
+            <p className="text-[11px] text-white/45">{aired}</p>
+          ) : null}
 
           {episode.overview ? (
             <p className="line-clamp-2 text-xs leading-relaxed text-white/55">
@@ -181,15 +188,12 @@ function EpisodeCard({
 
 /** A playable episode is a link; the not-yet-aired one is a plain card. */
 function Row({ href, children }: { href?: string; children: React.ReactNode }) {
-  const base = "group flex gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3";
+  const base = "group flex flex-col gap-2.5";
   return href ? (
-    <Link
-      href={href}
-      className={cn(base, "transition-colors hover:border-white/[0.18] hover:bg-white/[0.06]")}
-    >
+    <Link href={href} className={base}>
       {children}
     </Link>
   ) : (
-    <div className={cn(base, "border-dashed")}>{children}</div>
+    <div className={base}>{children}</div>
   );
 }
