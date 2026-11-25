@@ -3,6 +3,7 @@ import type { MediaCardItem, MediaType } from "@/types/media";
 /** Raw TMDB list-endpoint item, before mapping. */
 export interface TmdbListItemRaw {
   id: number;
+  original_language?: string;
   title?: string;
   name?: string;
   original_title?: string;

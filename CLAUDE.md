@@ -165,6 +165,9 @@ Cards carry **AniList ids** and link to `/anime/:id/:slug` (slug is cosmetic). T
 - **Use `getSession()` / `currentUserId()` from `server/session.ts`, never `auth()` directly.** Sessions are database rows, so each `auth()` is a query; `getSession` is wrapped in React `cache` so a page makes one. Calling `auth()` per feature exhausted the 5-connection pool (AdapterError, "Timed out fetching a new connection").
 - The watch page has **one** episode control (`EpisodePicker` in the bar). Prev/Next targets are resolved in `features/watch/screens.tsx` and cross seasons; only seasons with aired episodes are offered. A URL one past a season's last episode rolls into the next season; anything else out of range clamps.
 - `lib/release.ts` decides "not released" (future date, or a pre-release TMDB status for films). Cards show a lock badge, detail pages swap Watch for a locked pill plus banner, and the watch screens render a locked panel instead of a player.
+- `inCinemasOnly()` (same file): opened in cinemas within 60 days and no TMDB digital release (types 2/3 vs 4, from `release_dates` on the movie request). The watch page shows `CinemaGate` instead of the player (with "Try the players anyway"); the detail page shows `CinemaBanner`.
+- VidLink posts `MEDIA_DATA` ~2.5s after load when it has the title. `WatchPlayer` keeps the spinner up until then and, after 6s of silence, moves to the next source by itself (only when the user didn't pick VidLink by hand). SuperEmbed and VidSrc post nothing, so they can't be checked.
+- "More like this" (`rankRelated` in `server/tmdb/details.ts`): same original language and within 4 years of the title (a show's whole run), newest first, topped up from discover; 24 items, 12 behind a native `<details>` "View more". `homepage` links are dropped on a 404/410 (`server/tmdb/homepage.ts`, cached a day).
 
 ### Responsive rules
 
@@ -193,4 +196,4 @@ The player is a cross-origin iframe, so progress only exists if the provider han
 - Client hooks go through TanStack Query; server-rendered pages fetch per-rail with `safeFetch()` so one failing endpoint doesn't blank the page.
 - Route handlers with dynamic segments take `context: { params: Promise<{ id: string }> }` and must `await context.params` (Next 15).
 - ESLint disables `react-hooks/exhaustive-deps` project-wide; expect manual dep array review.
-- Tailwind 3 with `tailwindcss-animate`; shadcn style is `new-york`, base color `zinc`. Fonts: Geist Sans (body) + Geist Mono via `next/font/google` in `app/layout.tsx`.
+- Tailwind 3 with `tailwindcss-animate`; shadcn style is `new-york`, base color `zinc`. Fonts: Inter Tight (body) + Geist Mono via `next/font/google` in `app/layout.tsx`.

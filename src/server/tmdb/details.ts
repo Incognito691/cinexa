@@ -14,6 +14,7 @@ import { mapTmdbListItem, type TmdbListItemRaw } from "./mapper";
 import { applyContentFilterListLevel } from "@/server/filter/apply";
 
 import { tmdbFetch } from "./client";
+import { liveHomepage } from "./homepage";
 
 export type { CastMember, MoviePage, TitleDetail, TvPage, VideoItem };
 
@@ -152,6 +153,7 @@ export async function fetchTvDetailForFilter(
 
 interface TmdbTitleDetailRaw {
   id: number;
+  original_language?: string;
   title?: string;
   name?: string;
   tagline?: string | null;
@@ -181,6 +183,19 @@ interface TmdbTitleDetailRaw {
   videos?: { results?: TmdbVideoRaw[] };
   similar?: { results?: TmdbListItemRaw[] };
   recommendations?: { results?: TmdbListItemRaw[] };
+  release_dates?: {
+    results?: { release_dates?: { type: number; release_date: string }[] }[];
+  };
+}
+
+/** Earliest date of the given TMDB release types, any country. */
+function earliestRelease(raw: TmdbTitleDetailRaw, types: number[]): string | null {
+  const dates = (raw.release_dates?.results ?? [])
+    .flatMap((c) => c.release_dates ?? [])
+    .filter((r) => types.includes(r.type) && r.release_date)
+    .map((r) => r.release_date.slice(0, 10))
+    .sort();
+  return dates[0] ?? null;
 }
 
 /**
@@ -197,15 +212,81 @@ async function relatedTitles(
   raw: TmdbTitleDetailRaw,
   type: "movie" | "tv",
 ): Promise<MediaCardItem[]> {
-  const results = raw.recommendations?.results?.length
+  const recommended = raw.recommendations?.results?.length
     ? raw.recommendations.results
     : (raw.similar?.results ?? []);
+  const results = await rankRelated(raw, type, recommended);
 
   return (
     await applyContentFilterListLevel(
-      results.map((r) => mapTmdbListItem({ ...r, media_type: type })),
+      // A little headroom for the filter, without sending the AI layer
+      // (20 requests/day) a whole discover page to classify.
+      results.slice(0, RELATED_COUNT + 6).map((r) => mapTmdbListItem({ ...r, media_type: type })),
     )
-  ).slice(0, 12);
+  ).slice(0, RELATED_COUNT);
+}
+
+/** 12 shown, 12 more behind "View more". */
+const RELATED_COUNT = 24;
+/** Release years within this many either side count as "from the same era". */
+const YEAR_WINDOW = 4;
+
+const dateOf = (r: { release_date?: string; first_air_date?: string }) =>
+  r.release_date || r.first_air_date || "";
+const yearOf = (r: { release_date?: string; first_air_date?: string }) =>
+  Number(dateOf(r).slice(0, 4)) || null;
+
+/**
+ * TMDB's recommendations are behavioural and wander: a Hindi crime show got
+ * eleven American procedurals, and Animal (2023) got 1960s melodramas. The
+ * best matches share the title's original language and come out within
+ * YEAR_WINDOW years of it; TMDB's own lists are topped up from discover
+ * (same language, both genres then the first, same era, most-voted). Those
+ * come first, newest first, then whatever else TMDB suggested.
+ */
+async function rankRelated(
+  raw: TmdbTitleDetailRaw,
+  type: "movie" | "tv",
+  recommended: TmdbListItemRaw[],
+): Promise<TmdbListItemRaw[]> {
+  const lang = raw.original_language;
+  // A show's era is its whole run: Game of Thrones (2011–2019) should still
+  // reach House of the Dragon (2022).
+  const year = yearOf(raw);
+  const lastYear = Number(raw.last_air_date?.slice(0, 4)) || year;
+  const from = year === null ? null : year - YEAR_WINDOW;
+  const to = lastYear === null ? null : lastYear + YEAR_WINDOW;
+  const fits = (r: TmdbListItemRaw) => {
+    if (lang && r.original_language !== lang) return false;
+    const y = yearOf(r);
+    return from === null || to === null || (y !== null && y >= from && y <= to);
+  };
+
+  const seen = new Set<number>([raw.id]);
+  const fresh = (r: TmdbListItemRaw) => !seen.has(r.id) && Boolean(seen.add(r.id));
+  const pool = [...recommended, ...(raw.similar?.results ?? [])].filter(fresh);
+  const best = pool.filter(fits);
+
+  const genres = (raw.genres ?? []).slice(0, 2).map((g) => g.id);
+  const dateKey = type === "movie" ? "primary_release_date" : "first_air_date";
+  for (const withGenres of new Set([genres.join(","), genres.slice(0, 1).join(",")])) {
+    if (!lang || best.length >= RELATED_COUNT) break;
+    const extra = await tmdbFetch<{ results: TmdbListItemRaw[] }>(`/discover/${type}`, {
+      with_original_language: lang,
+      with_genres: withGenres || undefined,
+      sort_by: "vote_count.desc",
+      ...(from !== null && to !== null
+        ? { [`${dateKey}.gte`]: `${from}-01-01`, [`${dateKey}.lte`]: `${to}-12-31` }
+        : {}),
+    }).catch(() => ({ results: [] }));
+    best.push(...extra.results.filter(fresh));
+  }
+
+  best.sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
+  const rest = pool
+    .filter((r) => !best.includes(r))
+    .sort((a, b) => Number(b.original_language === lang) - Number(a.original_language === lang));
+  return [...best, ...rest];
 }
 
 /**
@@ -311,7 +392,7 @@ export async function fetchMoviePage(
   const result = await fetchTitleRaw(
     "movie",
     id,
-    "credits,videos,similar,recommendations",
+    "credits,videos,similar,recommendations,release_dates",
   );
   if (!result) return null;
   const { detail, raw } = result;
@@ -335,9 +416,18 @@ export async function fetchMoviePage(
     videos.find((v) => v.site === "YouTube" && v.type === "Teaser") ??
     null;
 
-  const similar = await relatedTitles(raw, "movie");
+  const [similar, homepage] = await Promise.all([
+    relatedTitles(raw, "movie"),
+    liveHomepage(detail.homepage),
+  ]);
+  detail.homepage = homepage;
 
-  return { detail, cast, trailer, similar };
+  const release = {
+    cinema: earliestRelease(raw, [2, 3]),
+    digital: earliestRelease(raw, [4]),
+  };
+
+  return { detail, cast, trailer, similar, release };
 }
 
 // ──────────────── TV page ────────────────
@@ -450,7 +540,11 @@ export async function fetchTvPage(
     videos.find((v) => v.site === "YouTube" && v.type === "Teaser") ??
     null;
 
-  const similar = await relatedTitles(raw, "tv");
+  const [similar, homepage] = await Promise.all([
+    relatedTitles(raw, "tv"),
+    liveHomepage(detail.homepage),
+  ]);
+  detail.homepage = homepage;
 
   return { detail, cast, trailer, similar, seasons, selectedSeason, episodes };
 }

@@ -17,6 +17,8 @@ export async function anilistQuery<T>(
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ query, variables }),
     next: { revalidate },
+    // A hung request would hold the page; fail over to its error state.
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`AniList failed: ${res.status}`);
 
