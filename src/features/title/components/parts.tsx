@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Lock, Play, Star } from "lucide-react";
+import { ArrowUpRight, Lock, Play, Star, Ticket } from "lucide-react";
 
 import { MediaCard } from "@/components/media/media-card";
 import { tmdbImage } from "@/lib/env";
@@ -252,13 +252,29 @@ export function SimilarGrid({
   title?: string;
 }) {
   if (items.length === 0) return null;
+  const grid = "grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-6";
+  const shown = items.slice(0, 12);
+  const more = items.slice(12);
   return (
     <Section title={title}>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-6">
-        {items.map((item) => (
+      <div className={grid}>
+        {shown.map((item) => (
           <MediaCard key={item.id} item={item} layout="grid" />
         ))}
       </div>
+      {/* Native disclosure: no client JS, and the button goes once it's open. */}
+      {more.length ? (
+        <details className="mt-3 sm:mt-4 [&[open]>summary]:hidden">
+          <summary className="mx-auto mt-3 flex w-fit cursor-pointer list-none items-center gap-2 rounded-xl border border-white/[0.12] bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/[0.08] hover:text-white [&::-webkit-details-marker]:hidden">
+            View more
+          </summary>
+          <div className={grid}>
+            {more.map((item) => (
+              <MediaCard key={item.id} item={item} layout="grid" />
+            ))}
+          </div>
+        </details>
+      ) : null}
     </Section>
   );
 }
@@ -323,6 +339,20 @@ export function WatchAction({
       <Play className="h-4 w-4 fill-current" />
       {label}
     </Link>
+  );
+}
+
+/** Strip for the hero of a film that's only in cinemas so far. */
+export function CinemaBanner({ digital }: { digital: string | null }) {
+  const date = releaseLabel(digital);
+  return (
+    <p className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2 text-sm text-white/80">
+      <Ticket className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+      <span>
+        <span className="font-semibold text-white">In cinemas now.</span>{" "}
+        {date ? `Streaming expected from ${date}.` : "Not streaming anywhere yet."}
+      </span>
+    </p>
   );
 }
 

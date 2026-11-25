@@ -30,6 +30,25 @@ export function isUnreleasedTitle(
   return !detail.releaseDate;
 }
 
+/** How long after opening a film with no digital date counts as cinema-only. */
+const CINEMA_WINDOW_DAYS = 60;
+
+/**
+ * Out in cinemas, not yet released digitally, so no player has it. Only
+ * within the first 60 days: TMDB often lacks digital dates (regional films
+ * especially), and an older film without one is usually streaming anyway.
+ */
+export function inCinemasOnly(
+  release: { cinema: string | null; digital: string | null },
+  now = new Date(),
+): boolean {
+  const { cinema, digital } = release;
+  if (!cinema || cinema > today(now)) return false;
+  if (digital && digital <= today(now)) return false;
+  const opened = new Date(`${cinema}T00:00:00Z`).getTime();
+  return now.getTime() - opened < CINEMA_WINDOW_DAYS * 86_400_000;
+}
+
 /** "Mar 12, 2028", or null without a date. */
 export function releaseLabel(date: string | null | undefined): string | null {
   if (!date) return null;

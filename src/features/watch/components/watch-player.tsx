@@ -19,6 +19,13 @@ import {
 
 /** How long the iframe gets to load before we offer the backup source. */
 const LOAD_TIMEOUT_MS = 12_000;
+/**
+ * VidLink posts `MEDIA_DATA` about 2.5s after loading when it has the title,
+ * then every 2s. Silence this long after load means its "couldn't find this
+ * content" screen. Until it speaks we keep the spinner over it, and on
+ * silence we move to the next source by ourselves.
+ */
+const NO_MEDIA_MS = 6_000;
 interface WatchPlayerProps {
   target: PlaybackTarget;
   title: string;
@@ -74,6 +81,11 @@ export function WatchPlayer({
 
   const [loaded, setLoaded] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
+  // VidLink only: it has confirmed the title, or we stopped waiting for it.
+  const [confirmed, setConfirmed] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+  // Label of the source we automatically moved away from, for the notice.
+  const [switchedFrom, setSwitchedFrom] = useState<string | null>(null);
 
   const frameRef = useRef<HTMLIFrameElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -130,6 +142,43 @@ export function WatchPlayer({
     const timer = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [frameSrc]);
+
+  useEffect(() => {
+    setConfirmed(false);
+    setGaveUp(false);
+    if (source.id !== "vidlink" || !loaded) return;
+    const timer = setTimeout(() => {
+      // Only when the source was chosen for them: someone who picked Primary
+      // by hand stays on it and sees its own message.
+      const fallback = sources.find((s) => s.id !== source.id && !s.animeOnly);
+      if (picked === null && fallback) {
+        setSwitchedFrom(source.label);
+        setPicked(fallback.id);
+      } else {
+        setGaveUp(true);
+      }
+    }, NO_MEDIA_MS);
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== source.progressOrigin) return;
+      const type = (event.data as { type?: string } | undefined)?.type;
+      if (type !== "MEDIA_DATA" && type !== "PLAYER_EVENT") return;
+      clearTimeout(timer);
+      setConfirmed(true);
+    };
+    window.addEventListener("message", onMessage);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("message", onMessage);
+    };
+  }, [frameSrc, loaded, source.id, source.progressOrigin]);
+
+  useEffect(() => {
+    if (!switchedFrom) return;
+    const timer = setTimeout(() => setSwitchedFrom(null), 6_000);
+    return () => clearTimeout(timer);
+  }, [switchedFrom]);
+
+  const waiting = !loaded || (source.id === "vidlink" && !confirmed && !gaveUp);
 
   /*
    * The anime player's message protocol (every message has
@@ -219,12 +268,18 @@ export function WatchPlayer({
           className="absolute inset-0 h-full w-full border-0"
         />
 
-        {!loaded ? (
+        {waiting ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black">
             <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
             <p className="text-xs text-white/50">
               Loading {source.label.toLowerCase()} source…
             </p>
+          </div>
+        ) : null}
+
+        {switchedFrom ? (
+          <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full border border-white/10 bg-black/80 px-4 py-2 text-xs text-white/80 shadow-lg">
+            Not on {switchedFrom}, switched to {source.label}
           </div>
         ) : null}
 
@@ -251,7 +306,10 @@ export function WatchPlayer({
               <button
                 key={s.id}
                 type="button"
-                onClick={() => setSourceId(s.id)}
+                onClick={() => {
+                  setSwitchedFrom(null);
+                  setSourceId(s.id);
+                }}
                 aria-pressed={s.id === sourceId}
                 className={cn(
                   "rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors",

@@ -1,6 +1,6 @@
 
 import { LibraryButton } from "@/features/library";
-import { isUnreleasedTitle } from "@/lib/release";
+import { inCinemasOnly, isUnreleasedTitle } from "@/lib/release";
 import type { MoviePage } from "@/types/media";
 
 import {
@@ -10,6 +10,7 @@ import {
   type DetailRow,
   DetailsCard,
   Overview,
+  CinemaBanner,
   ReleaseBanner,
   SimilarGrid,
   TitleHero,
@@ -28,6 +29,7 @@ export function MovieDetailView({
   cast,
   trailer,
   similar,
+  release,
   watchPath,
 }: MoviePage & {
   /** Where the film plays. Anime films pass `/anime/:id/:slug/watch`. */
@@ -89,7 +91,11 @@ export function MovieDetailView({
           </>
         }
       >
-        {locked ? <ReleaseBanner releaseDate={locked.releaseDate} /> : null}
+        {locked ? (
+          <ReleaseBanner releaseDate={locked.releaseDate} />
+        ) : inCinemasOnly(release) ? (
+          <CinemaBanner digital={release.digital} />
+        ) : null}
       </TitleHero>
 
       <div className="space-y-12 px-4 pb-16 sm:px-8 lg:px-12">

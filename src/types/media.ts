@@ -185,6 +185,11 @@ export interface MoviePage {
   /** The trailer we'd embed, if TMDB has a YouTube one. */
   trailer: VideoItem | null;
   similar: MediaCardItem[];
+  /**
+   * Earliest cinema and digital release dates across all countries, from
+   * TMDB's release types (2/3 = theatrical, 4 = digital). See `inCinemasOnly`.
+   */
+  release: { cinema: string | null; digital: string | null };
 }
 
 export interface CastMember {

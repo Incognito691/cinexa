@@ -5,6 +5,7 @@ import { releaseLabel } from "@/lib/release";
 import type { MediaCardItem, TvEpisode, TvSeasonSummary, UpcomingEpisode } from "@/types/media";
 
 import type { PlaybackTarget } from "../lib/sources";
+import { CinemaGate } from "./cinema-gate";
 import { EpisodeNav, type EpisodeStep } from "./episode-nav";
 import { WATCH_CHROME_PX } from "../lib/layout";
 import { WatchPlayer } from "./watch-player";
@@ -39,6 +40,8 @@ interface WatchViewProps {
   next?: EpisodeStep | null;
   /** Set when there's nothing to play yet; replaces the player. */
   locked?: { releaseDate: string | null };
+  /** Movie only showing in cinemas: a panel stands in for the player. */
+  inCinemas?: { digital: string | null; trailerKey?: string };
   /** `s{n}e{n}` keys the signed-in user has already watched. */
   watchedKeys?: string[];
   /** Per-episode progress (0..1, null = watched with no runtime), same keys. */
@@ -72,6 +75,7 @@ export function WatchView({
   prev = null,
   next = null,
   locked,
+  inCinemas,
   watchedKeys = [],
   progress = {},
   signedIn = false,
@@ -154,6 +158,16 @@ export function WatchView({
             </div>
           </div>
         </div>
+      ) : inCinemas ? (
+        <CinemaGate
+          title={title}
+          digital={inCinemas.digital}
+          trailerKey={inCinemas.trailerKey}
+          frameWidth={FRAME_WIDTH}
+        >
+          <WatchTracker target={target} signedIn={signedIn} dwellFallback={!isTv} />
+          <WatchPlayer target={target} title={title} startAt={startAt} />
+        </CinemaGate>
       ) : (
         <>
           {/* Position tracking runs for both media types. Only the *dwell*

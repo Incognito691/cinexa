@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { cutAtNextEpisode } from "@/features/title";
-import { isUnreleased, isUnreleasedTitle } from "@/lib/release";
+import { inCinemasOnly, isUnreleased, isUnreleasedTitle } from "@/lib/release";
 import { animeEpisodeFor, asAnimeCards } from "@/server/anilist/resolve";
 import { fetchMoviePage, fetchTvPage } from "@/server/tmdb";
 import {
@@ -170,7 +170,7 @@ export async function MovieWatchScreen({
   const page = await fetchMoviePage(tmdbId);
   if (!page) notFound();
 
-  const { detail, similar } = page;
+  const { detail, similar, trailer, release } = page;
   const year = detail.releaseDate?.slice(0, 4);
   // Both no-op when signed out — login is optional.
   const [anime, signedIn, startAt, related] = await Promise.all([
@@ -192,6 +192,9 @@ export async function MovieWatchScreen({
       overview={detail.overview}
       detailHref={detailPath}
       locked={isUnreleasedTitle(detail) ? { releaseDate: detail.releaseDate } : undefined}
+      inCinemas={
+        inCinemasOnly(release) ? { digital: release.digital, trailerKey: trailer?.key } : undefined
+      }
       similar={related}
       signedIn={signedIn}
       startAt={startAt}
