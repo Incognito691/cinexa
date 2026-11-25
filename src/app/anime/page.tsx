@@ -6,8 +6,12 @@ import { animeHref } from "@/lib/anime-slug";
 import { anilistIdFor, animeTmdbKeys } from "@/server/anilist/resolve";
 import { isSignedIn } from "@/server/watch-history";
 
-// No page-level `revalidate`: the continue row reads the session, so the page
-// is per-request. The AniList query still caches itself for 30 minutes.
+// Per-request: the continue row reads the session. Said explicitly because
+// `getSession` swallows the dynamic-usage error, so Next would otherwise
+// prerender the page at build time (hanging the build on a slow AniList, or
+// baking in the error state until the next deploy). The AniList query still
+// caches itself for 30 minutes.
+export const dynamic = "force-dynamic";
 
 /**
  * The viewer's anime in progress. Signed out it's an empty list before the
